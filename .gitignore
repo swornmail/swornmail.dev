@@ -1,0 +1,22 @@
+/node_modules
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+
+.env
+.env.local
+.env*.local
+.DS_Store
+
+# Terraform state records account identifiers, bucket names and distribution
+# IDs. It is not a secret store, but it is not public information either, and
+# this repository is public.
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+!infra/terraform.tfvars.example
+
+# OMC operational state
+.omc/

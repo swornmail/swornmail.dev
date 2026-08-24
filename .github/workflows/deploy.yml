@@ -1,0 +1,107 @@
+name: Deploy
+
+# Builds on every pull request so a break is caught before merge, and
+# publishes to Cloudflare Pages from main.
+#
+# The build deliberately stays in GitHub Actions rather than using Pages'
+# native Git integration. Pages would build the site itself and publish it
+# without the checks in this file or in public-boundary.yml ever running —
+# so the guards would exist but would not gate anything. Building here and
+# publishing with wrangler keeps them in the path.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build
+
+      - name: Check the export is real
+        # `next build` can succeed and still emit nothing useful if the export
+        # config is wrong. Publishing an empty directory over a working site is
+        # the failure this prevents.
+        run: |
+          test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
+          grep -q "SwornMail" out/index.html || { echo "::error::out/index.html has no content"; exit 1; }
+          test -f out/_headers || { echo "::error::_headers did not ship; the site would serve with no CSP"; exit 1; }
+          echo "index.html: $(wc -c < out/index.html) bytes"
+
+      - name: Check no external requests crept in
+        # The site's credibility argument includes making no third-party
+        # requests. A stray font or analytics import should fail the build,
+        # not be discovered by a reader.
+        run: |
+          if grep -oE '(src|href)="https?://[^"]*"' out/index.html \
+             | grep -vE 'github\.com|crates\.io|platops\.com|swornmail\.com|w3\.org'; then
+            echo "::error::built HTML references an external resource"
+            exit 1
+          fi
+          echo "no external resource references"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: out/
+          retention-days: 7
+
+  publish:
+    needs: build
+    # Skips cleanly until the Cloudflare credentials exist, so the repository
+    # does not carry a permanent red mark for a reason that is not a defect.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name != 'pull_request'
+      && vars.CLOUDFLARE_ACCOUNT_ID != ''
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      # The `secrets` context is not available in an `if`, at job or step
+      # level. Mapping it to an env var here is what makes the guard below
+      # possible; `env` is available in a step-level condition.
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: out
+
+      - name: Publish to Cloudflare Pages
+        # A half-configured repository (account ID set, token not yet) skips
+        # the publish rather than failing a run for a reason that is not a
+        # defect.
+        if: env.CF_TOKEN != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy out --project-name=swornmail-dev --branch=main
+
+      - name: Say so if nothing was published
+        # A green run that silently published nothing is worse than a red one.
+        if: env.CF_TOKEN == ''
+        run: |
+          echo "::warning::CLOUDFLARE_API_TOKEN is not set — the site was built and verified but NOT published."
+

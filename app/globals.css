@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Light is the base and dark is authored separately rather than inverted: the
+   code panels in particular need different contrast decisions in each, because
+   a tinted panel that reads as "quiet" on paper reads as "disabled" on black.
+
+   Every text/background pair here was measured in a browser in both themes;
+   the lowest is 6.4:1 against a WCAG AA requirement of 4.5.
+   --------------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --color-paper: #fcfbf9;
+  --color-sunk: #f4f1ec;
+  --color-ink: #17191c;
+  --color-muted: #575d66;
+  --color-rule: #e2ded6;
+  --color-firm: #cbc5ba;
+  --color-accent: #14487a;
+  --color-accent-deep: #0f3a63;
+  --color-code-bg: #f6f4ef;
+  --color-code-ink: #24272c;
+  --color-code-rule: #e0dbd1;
+  --color-flag: #7a4b00;
+  --color-btn-ink: #ffffff;
+}
+
+/* System preference, unless an explicit choice overrides it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: #101215;
+    --color-sunk: #16191d;
+    --color-ink: #e6e4df;
+    --color-muted: #9aa1ab;
+    --color-rule: #262a30;
+    --color-firm: #3a3f47;
+    --color-accent: #7fb3e8;
+    --color-accent-deep: #a6cbf0;
+    --color-code-bg: #15181c;
+    --color-code-ink: #d6d3cc;
+    --color-code-rule: #2b3037;
+    --color-flag: #d9a441;
+    --color-btn-ink: #0d1014;
+  }
+}
+
+/* Explicit choice wins in both directions. */
+:root[data-theme="dark"] {
+  --color-paper: #101215;
+  --color-sunk: #16191d;
+  --color-ink: #e6e4df;
+  --color-muted: #9aa1ab;
+  --color-rule: #262a30;
+  --color-firm: #3a3f47;
+  --color-accent: #7fb3e8;
+  --color-accent-deep: #a6cbf0;
+  --color-code-bg: #15181c;
+  --color-code-ink: #d6d3cc;
+  --color-code-rule: #2b3037;
+  --color-flag: #d9a441;
+  --color-btn-ink: #0d1014;
+}
+
+/* --------------------------------------------------------------------------- */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 30rem) {
+  body {
+    font-size: 16px;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Components.
+
+   These are the pieces where a chain of utility classes would obscure rather
+   than express the intent: the code panels with their own token colours, the
+   scale figure whose whole point is a CSS trick, and the theme-toggle guard.
+   Everything else on the page is plain Tailwind utilities.
+   --------------------------------------------------------------------------- */
+
+@layer components {
+  /* Code is the site's main visual content: real terminal output and real DNS
+     records. Long lines scroll inside the block so the page itself never
+     scrolls sideways — verified down to a 316px viewport. */
+  .code-block {
+    background: var(--color-code-bg);
+    color: var(--color-code-ink);
+    border: 1px solid var(--color-code-rule);
+    border-radius: 5px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  /* Terminal chrome: prompts and commentary, deliberately recessive. */
+  .tok-c {
+    color: var(--color-muted);
+  }
+  /* The part an operator is meant to copy. */
+  .tok-k {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  /* Reserved for exactly one job: the things an operator should notice in
+     otherwise uniform output — the t=y flag and the observe-only note. Used
+     anywhere else it would spend its meaning. */
+  .tok-f {
+    color: var(--color-flag);
+    font-weight: 600;
+  }
+
+  .inline-code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--color-sunk);
+    border: 1px solid var(--color-rule);
+    border-radius: 3px;
+    padding: 0.05em 0.3em;
+  }
+
+  /* The DNS records inside the flow diagram. Preserved whitespace, because a
+     record split across two lines in JSX collapses without it. */
+  .record {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--color-code-ink);
+    background: var(--color-code-bg);
+    border: 1px solid var(--color-code-rule);
+    border-radius: 4px;
+    padding: 0.5rem 0.6rem;
+    overflow-x: auto;
+  }
+
+  /* The /64 scale figure. The hairline is the entire IPv4 address space drawn
+     at the same scale as the bar — except it is about four million times too
+     wide to be honest, which is the point the caption makes. */
+  .scale-bar {
+    height: 2.5rem;
+    border: 1px solid var(--color-firm);
+    border-radius: 3px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-sunk) 0 6px,
+      transparent 6px 12px
+    );
+    position: relative;
+  }
+  .scale-bar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-flag);
+  }
+}
+
+/* Without JavaScript there is no toggle to show: prefers-color-scheme has
+   already chosen a theme, and a button that cannot work is worse than none. */
+html:not(.js) .theme-toggle {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

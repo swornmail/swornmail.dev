@@ -1,0 +1,37 @@
+# Response headers for Cloudflare Pages.
+#
+# Next copies public/ verbatim into out/, so this file ships at the root of
+# the deployment where Pages expects it.
+#
+# These carry the same policy the CloudFront response-headers policy would
+# have set. Keeping them in the repository rather than in infrastructure means
+# a header change is a reviewable diff.
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
+  # The site fetches nothing, so everything defaults to 'none' and the few
+  # things it needs are named explicitly.
+  #
+  # script-src carries 'unsafe-inline', which is a real weakening and worth
+  # stating rather than burying. A static Next.js export inlines bootstrap
+  # scripts whose contents change every build, so neither a nonce (no server)
+  # nor a fixed hash list works without extracting hashes during CI. The page
+  # loads no third-party script and accepts no input, so residual risk is low
+  # — but if this site ever grows a form or an embed, fix this first.
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+
+# Fingerprinted assets: the filename contains a content hash, so the content
+# behind a given name never changes.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Pages themselves must revalidate, or a deploy takes an hour to be visible.
+/
+  Cache-Control: public, max-age=60, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=60, must-revalidate
