@@ -20,7 +20,7 @@ CI publishes on every merge to `main` (`.github/workflows/deploy.yml`). Prefer
 that path always.
 
 **Never run `wrangler pages deploy out` from this working copy.** Local
-development sessions can leave OMC tooling state under `out/.omc/` — it is
+development sessions can leave editor and tooling state inside `out/` — it is
 git-ignored, so it never reaches the repository, but `wrangler pages deploy`
 publishes whatever sits in the given directory on disk, not what git tracks.
 Its behaviour toward dot-directories has not been verified, and this is not
@@ -74,7 +74,12 @@ Verified in a browser across all five pages: zero horizontal overflow at a
 heading-level jumps, one `h1` per page, and every text/background pair at
 5.89:1 or better in both themes against a 4.5 AA requirement.
 
-## Not yet live
+## Deployment state
 
-No repository, no Pages project, no custom domain. `swornmail.com` reserves a
-navigation slot for this site; nothing needs redesigning when it lands.
+Published to Cloudflare Pages by GitHub Actions on merge to `main`, the same
+stack and the same guards as `swornmail.com`. The two sites share `globals.css`,
+the token palette and the component classes deliberately: they should read as
+one system.
+
+This site is non-normative. The Internet-Draft is the contract, and where a page
+here disagrees with the draft, the page is the bug.
