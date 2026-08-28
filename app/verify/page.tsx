@@ -13,17 +13,30 @@ import {
   PROSE,
   LABEL,
   CAPTION,
+  ArticleSchema,
 } from "../site-chrome";
 
-export const metadata = {
+// Single source for this page's title and description: `metadata` and the
+// TechArticle schema both read it, so they cannot drift apart.
+const PAGE = {
+  path: "/verify/",
   title: "Verification and results — SwornMail documentation",
   description:
     "The five SwornMail result values, what causes each, and the rules a receiver must follow when acting on them.",
 };
 
+export const metadata = {
+  title: PAGE.title,
+  description: PAGE.description,
+  // Overrides the layout's canonical, which would otherwise point every
+  // page at the site root.
+  alternates: { canonical: PAGE.path },
+};
+
 export default function Verify() {
   return (
     <>
+      <ArticleSchema {...PAGE} />
       <a
         href="#main"
         className="absolute left-[-9999px] z-10 bg-accent px-4 py-[0.6rem] text-white focus:left-0 focus:top-0"

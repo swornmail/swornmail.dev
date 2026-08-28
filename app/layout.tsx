@@ -3,6 +3,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://swornmail.dev"),
+  // Declared explicitly because `trailingSlash: true` means /deploy and
+  // /deploy/ both resolve; without this a crawler picks its own winner.
+  alternates: { canonical: "/" },
   title: "SwornMail documentation",
   description:
     "Reference documentation for the SwornMail protocol: DNS record format, verification and result codes, operator deployment, and the reference implementations.",
@@ -24,6 +27,37 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Structured data for the documentation site as a whole. Individual pages add
+ * a TechArticle node of their own; this establishes the collection they
+ * belong to.
+ *
+ * Nothing here asserts adoption, an organisation, or a product, because none
+ * of those exist. The non-normative caveat is carried in the description
+ * rather than left for the reader to discover on the page.
+ */
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://swornmail.dev/#website",
+      url: "https://swornmail.dev/",
+      name: "SwornMail documentation",
+      description:
+        "Non-normative reference documentation for the SwornMail protocol. The Internet-Draft is the normative text.",
+      inLanguage: "en",
+      publisher: { "@id": "https://swornmail.dev/#maintainer" },
+    },
+    {
+      "@type": "Person",
+      "@id": "https://swornmail.dev/#maintainer",
+      name: "Val Kafedzhy",
+      url: "https://github.com/swornmail",
+    },
+  ],
+};
+
 // Applied before first paint so the page never flashes the wrong theme. It
 // runs ahead of hydration, which is the only reason it is inlined rather than
 // living in the toggle component.
@@ -42,6 +76,13 @@ export default function RootLayout({
             deferring it to a component would reintroduce the flash it exists
             to prevent. */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        {/* JSON-LD. Inert data rather than executable code, and built from a
+            module-scope constant with no runtime input, so it carries the same
+            (absent) XSS risk as the theme bootstrap above. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </head>
       <body>{children}</body>
     </html>
