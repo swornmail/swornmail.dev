@@ -60,7 +60,7 @@ jobs:
           fail=0
           while IFS= read -r -d '' f; do
             if grep -oE '(src|href)="https?://[^"]*"' "$f" \
-               | grep -vE 'github\.com|crates\.io|platops\.com|swornmail\.com|w3\.org'; then
+               | grep -vE 'github\.com|crates\.io|swornmail\.com|w3\.org'; then
               echo "::error::$f references an external resource"
               fail=1
             fi

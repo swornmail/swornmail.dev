@@ -71,10 +71,9 @@ jobs:
           # in during a later content edit.
           #
           # Scoped to app/, the rendered site. The README is developer-facing
-          # and has to be able to state the rule it is enforcing, and the
-          # footer's "PlatOps Security, LLC" maintainer credit is a deliberate
-          # attribution carried by every repo in the org, not a product
-          # reference.
+          # and has to be able to state the rule it is enforcing. As of
+          # 2026-08-28 no company name appears in public material at all — the
+          # footer credits the maintainer personally.
           if git grep -nIE 'commercial|pricing|subscription|paid tier|paywall|billing|customer console' -- app/ > /tmp/comm; then
             echo "::error::the public site references a commercial offering"
             cat /tmp/comm

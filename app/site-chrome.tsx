@@ -178,11 +178,7 @@ export function Footer() {
           disagree, the draft wins.
         </p>
         <p className="mt-4 max-w-[60ch] text-[0.8125rem]">
-          Maintained by{" "}
-          <a href="https://platops.com" className={LINK}>
-            PlatOps Security, LLC
-          </a>
-          . Corrections:{" "}
+          Maintained by Val Kafedzhy. Corrections:{" "}
           <a href="mailto:val@sworn.email" className={LINK}>
             val@sworn.email
           </a>{" "}
