@@ -14,6 +14,23 @@ npm run dev      # http://localhost:3000
 npm run build    # static export into out/
 ```
 
+## Deploying
+
+CI publishes on every merge to `main` (`.github/workflows/deploy.yml`). Prefer
+that path always.
+
+**Never run `wrangler pages deploy out` from this working copy.** Local
+development sessions can leave OMC tooling state under `out/.omc/` — it is
+git-ignored, so it never reaches the repository, but `wrangler pages deploy`
+publishes whatever sits in the given directory on disk, not what git tracks.
+Its behaviour toward dot-directories has not been verified, and this is not
+the place to find out by testing in production. `deploy.yml` fails the build
+if `out/` contains a dotfile or dot-directory for the same reason.
+
+If a local deploy is ever genuinely necessary, run `rm -rf out && npm run
+build` immediately beforehand and confirm `find out -name '.*'` prints
+nothing before invoking wrangler.
+
 ## Pages
 
 | Path | What |

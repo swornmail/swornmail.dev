@@ -52,14 +52,38 @@ jobs:
       - name: Check no external requests crept in
         # The site's credibility argument includes making no third-party
         # requests. A stray font or analytics import should fail the build,
-        # not be discovered by a reader.
+        # not be discovered by a reader. This site has five pages, not one, so
+        # the check has to walk every exported HTML file — checking only
+        # index.html would let a reference on /deploy/, /records/, /verify/ or
+        # /implementations/ ship green.
         run: |
-          if grep -oE '(src|href)="https?://[^"]*"' out/index.html \
-             | grep -vE 'github\.com|crates\.io|platops\.com|swornmail\.com|w3\.org'; then
-            echo "::error::built HTML references an external resource"
+          fail=0
+          while IFS= read -r -d '' f; do
+            if grep -oE '(src|href)="https?://[^"]*"' "$f" \
+               | grep -vE 'github\.com|crates\.io|platops\.com|swornmail\.com|w3\.org'; then
+              echo "::error::$f references an external resource"
+              fail=1
+            fi
+          done < <(find out -name '*.html' -print0)
+          if [ "$fail" -ne 0 ]; then
             exit 1
           fi
-          echo "no external resource references"
+          echo "no external resource references, checked $(find out -name '*.html' | wc -l) pages"
+
+      - name: Check no local tooling state leaked into the export
+        # A manual `wrangler pages deploy out` run from this working copy
+        # would publish whatever sits in out/, dot-directories included —
+        # wrangler is not relied on to filter this out, because that behaviour
+        # was never confirmed. CI always builds out/ fresh from a clean
+        # checkout, so this should never fire here; it exists to catch a
+        # stale or locally-built out/ before it ships.
+        run: |
+          if find out -mindepth 1 -name '.*' | grep -q .; then
+            echo "::error::out/ contains a dotfile or dot-directory; a local build likely leaked tooling state (e.g. .omc/) into the export"
+            find out -mindepth 1 -name '.*'
+            exit 1
+          fi
+          echo "no dotfiles in the export"
 
       - uses: actions/upload-artifact@v7
         with:
