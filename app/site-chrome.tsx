@@ -76,6 +76,43 @@ export const NAV: { title: string; items: { href: string; label: string }[] }[] 
   },
 ];
 
+/**
+ * Per-page structured data. The site-level graph in layout.tsx establishes the
+ * collection; this names the individual document, so an assistant citing the
+ * record reference cites that page rather than the site as a whole.
+ *
+ * Inert data built from props the page already passes to `metadata`, so the
+ * schema and the meta tags cannot disagree.
+ */
+export function ArticleSchema({
+  path,
+  title,
+  description,
+}: {
+  path: string;
+  title: string;
+  description: string;
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "@id": `https://swornmail.dev${path}#article`,
+    isPartOf: { "@id": "https://swornmail.dev/#website" },
+    url: `https://swornmail.dev${path}`,
+    headline: title,
+    description,
+    author: { "@id": "https://swornmail.dev/#maintainer" },
+    license: "https://www.apache.org/licenses/LICENSE-2.0",
+    inLanguage: "en",
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function Masthead() {
   return (
     <header className="sticky top-0 z-[5] border-b border-rule bg-paper/90 backdrop-blur">
