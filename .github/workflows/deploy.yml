@@ -93,19 +93,21 @@ jobs:
 
   publish:
     needs: build
-    # Skips cleanly until the Cloudflare credentials exist, so the repository
-    # does not carry a permanent red mark for a reason that is not a defect.
+    # The credential check lives in the steps below, not here. A job-level
+    # `if` can read `vars` but not `secrets`, and both Cloudflare values are
+    # secrets so that neither prints in the public run logs. Gating on a
+    # variable that no longer exists would skip every publish, silently.
     if: >-
       github.ref == 'refs/heads/main'
       && github.event_name != 'pull_request'
-      && vars.CLOUDFLARE_ACCOUNT_ID != ''
     runs-on: ubuntu-latest
     environment: production
     env:
       # The `secrets` context is not available in an `if`, at job or step
-      # level. Mapping it to an env var here is what makes the guard below
+      # level. Mapping it to env vars here is what makes the guards below
       # possible; `env` is available in a step-level condition.
       CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -113,19 +115,18 @@ jobs:
           path: out
 
       - name: Publish to Cloudflare Pages
-        # A half-configured repository (account ID set, token not yet) skips
-        # the publish rather than failing a run for a reason that is not a
-        # defect.
-        if: env.CF_TOKEN != ''
+        # A half-configured repository skips the publish rather than failing a
+        # run for a reason that is not a defect.
+        if: env.CF_TOKEN != '' && env.CF_ACCOUNT != ''
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy out --project-name=swornmail-dev --branch=main
 
       - name: Say so if nothing was published
         # A green run that silently published nothing is worse than a red one.
-        if: env.CF_TOKEN == ''
+        if: env.CF_TOKEN == '' || env.CF_ACCOUNT == ''
         run: |
-          echo "::warning::CLOUDFLARE_API_TOKEN is not set — the site was built and verified but NOT published."
+          echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set — the site was built and verified but NOT published."
 
