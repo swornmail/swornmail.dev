@@ -1,0 +1,23 @@
+# SwornMail documentation
+
+> SwornMail is an open protocol that lets a sending mail operator attest, verifiably and at SMTP connection time, that an IPv6 address belongs to a declared prefix under one accountable domain. Receivers key reputation on (operator domain, observed /64). It is fail-open: absence or failure of attestation must never make treatment worse. It is specified in an Internet-Draft that has not yet been submitted to the IETF; it is not a standard, and there are no public deployments.
+
+These pages are non-normative. Where they disagree with the Internet-Draft, the draft is correct.
+
+## Documentation
+
+- [Overview](https://swornmail.dev/): what SwornMail does, and what it deliberately does not do
+- [Deploy as an operator](https://swornmail.dev/deploy/): generate a key and DNS records, publish, verify; starts in observe-only mode
+- [DNS records](https://swornmail.dev/records/): key and policy record tags, parsing rules, prefix constraints, delegation
+- [Verification and results](https://swornmail.dev/verify/): result values, reputation semantics, DNS trust, both deployment modes
+- [Implementations](https://swornmail.dev/implementations/): Go reference and CLI, Rust verifier, Postfix milter, rspamd module, conformance vectors
+
+## Specification
+
+- [Internet-Draft](https://github.com/swornmail/spec/blob/main/draft-kafedzhy-swornmail-01.md): draft-kafedzhy-swornmail-01, the normative text
+- [Threat model](https://github.com/swornmail/spec/blob/main/threat-model.md): assets, adversaries, analyzed attacks, residual risks
+- [Conformance vectors](https://github.com/swornmail/spec/tree/main/test-vectors): shared test vectors for the -01 wire format
+
+## Optional
+
+- [swornmail.com](https://swornmail.com/): the problem statement and project status

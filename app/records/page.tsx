@@ -14,7 +14,9 @@ import {
   LABEL,
   CAPTION,
   ArticleSchema,
+  pageMetadata,
 } from "../site-chrome";
+import type { Metadata } from "next";
 
 // Single source for this page's title and description: `metadata` and the
 // TechArticle schema both read it, so they cannot drift apart.
@@ -25,13 +27,7 @@ const PAGE = {
     "The SwornMail key record and policy record: every tag, whether it is required, and what makes a record malformed.",
 };
 
-export const metadata = {
-  title: PAGE.title,
-  description: PAGE.description,
-  // Overrides the layout's canonical, which would otherwise point every
-  // page at the site root.
-  alternates: { canonical: PAGE.path },
-};
+export const metadata: Metadata = pageMetadata(PAGE);
 
 export default function Records() {
   return (
@@ -144,8 +140,8 @@ export default function Records() {
         </h2>
         <p className={PROSE}>
           Published once per operator. It enumerates the attested prefixes — for
-          Mode 1 discovery and for third-party audit — and carries the
-          operator-wide policy tags.
+          Mode 1 discovery, for Mode 2 authorisation, and for third-party audit
+          — and carries the operator-wide policy tags.
         </p>
         <pre className="code-block my-4">
           <code>
@@ -171,13 +167,15 @@ export default function Records() {
             <th scope="row">
               <C>p</C>
             </th>
-            <td>Required</td>
+            <td>Optional, but without it nothing is attested</td>
             <td>
               Comma-separated attested prefixes, each meeting the{" "}
               <a href="#constraints" className={LINK}>
                 prefix constraints
               </a>
-              . At most 64; verifiers ignore anything beyond the 64th.
+              . At most 64; verifiers ignore anything beyond the 64th. The same
+              list authorises prefixes in both modes, so a policy with no{" "}
+              <C>p</C> authorises no Mode 2 token.
             </td>
           </tr>
           <tr>
@@ -189,10 +187,14 @@ export default function Records() {
             </td>
             <td>
               Reputation unit: the prefix length you ask receivers to aggregate
-              at. Must be 1–64. A value outside that range makes the record{" "}
+              at. It must be no shorter than every prefix in <C>p</C> and no
+              longer than 64 — with only /48s in <C>p</C>, anything from 48 to 64. A
+              value outside that range makes the record{" "}
               <strong>malformed</strong> rather than being silently clamped, so
               you see the error instead of quietly getting different behaviour
-              than you asked for.
+              than you asked for. Every Mode 2 token you issue must carry this
+              same unit; an operator needing several granularities uses a
+              separate operator domain for each.
             </td>
           </tr>
           <tr>
@@ -205,7 +207,7 @@ export default function Records() {
               <a href="#testing" className={LINK}>
                 testing mode
               </a>
-              .
+              . Unknown flags are ignored.
             </td>
           </tr>
           <tr>
@@ -214,13 +216,37 @@ export default function Records() {
             </th>
             <td>Optional</td>
             <td>
-              Aggregate report destination. <C>mailto:</C> only, with
-              DMARC-style external-destination verification.
+              Aggregate report destination. Only an ASCII{" "}
+              <C>mailto:&lt;local-part&gt;@&lt;domain&gt;</C> is valid, with a
+              dot-atom local part and an A-label domain: no quoted local part,
+              whitespace, URI parameters, commas or additional recipients. See{" "}
+              <a href="#reports" className={LINK}>
+                aggregate reports
+              </a>
+              .
             </td>
           </tr>
         </Table>
         <p className={CAPTION}>
-          <C>u</C>, <C>t</C> and <C>rua</C> apply to both deployment modes.
+          <C>u</C>, <C>t</C> and <C>rua</C> apply to both deployment modes.{" "}
+          <C>u</C> is a request: receivers scope consequences to the connecting
+          address&rsquo;s /64 unless they hold independent evidence of wider
+          control — see{" "}
+          <a href="/verify/#on-pass" className={LINK}>
+            reputation semantics
+          </a>
+          .
+        </p>
+
+        <h3 className={H3} id="accountability">
+          Publishing a prefix means answering for all of it
+        </h3>
+        <p className={PROSE}>
+          Enumerating a prefix in <C>p=</C> is an unconditional acceptance of
+          accountability for every address inside it, including sub-allocations
+          whose reverse DNS you have delegated to someone else. If you delegate
+          reverse DNS for part of a range, enumerate only the sub-prefixes you
+          operate directly.
         </p>
 
         {/* ------------------------------------------------ testing */}
@@ -228,11 +254,13 @@ export default function Records() {
           Testing mode
         </h2>
         <p className={PROSE}>
-          Publish <C>t=y</C> and receivers report{" "}
-          <C>sworn=none policy.testing=y</C>, carrying the would-be result as a
-          separate property. You stake no reputation in either direction — not
-          credit, not blame — and can watch how your traffic would be classified
-          before accepting accountability for anything.
+          Publish <C>t=y</C> and, when every check would otherwise pass,
+          receivers report{" "}
+          <C>sworn=none policy.testing=y policy.wouldbe=pass</C> instead of{" "}
+          <C>pass</C>; a failure is still reported as a failure. You stake no
+          reputation in either direction — not credit, not blame — and can
+          watch how your traffic would be classified before accepting
+          accountability for anything.
         </p>
         <div className={NOTE_FLAG}>
           <p className={PROSE}>
@@ -247,6 +275,28 @@ export default function Records() {
           <C>sworn genrecord</C> publishes <C>t=y</C> <em>by default</em>. You
           leave testing mode deliberately, by re-running with{" "}
           <C>--testing=false</C>.
+        </p>
+
+        {/* ------------------------------------------------ reports */}
+        <h2 className={H2} id="reports">
+          Aggregate reports
+        </h2>
+        <p className={PROSE}>
+          A <C>rua=</C> tag asks receivers for aggregate feedback, in the spirit
+          of DMARC reports. If the mailbox&rsquo;s domain is not your operator
+          domain or a subdomain of it, a receiver sends nothing until that
+          domain consents by publishing a TXT record containing{" "}
+          <C>v=SWORN1</C> at{" "}
+          <C>&lt;operator-domain&gt;._report._sworn.&lt;rua-domain&gt;</C>. That
+          is DMARC&rsquo;s external-destination check, and it is what stops
+          receivers being turned into an attacker-directed mail cannon.
+        </p>
+        <p className={`${PROSE} mt-4`}>
+          Receivers that honour <C>rua</C> should send at most one report a
+          day per receiver and operator: counts of <C>pass</C>, <C>fail</C>{" "}
+          and <C>none</C> per attested prefix and unit, with the reasons for
+          failures. Counts only, never per-message or per-recipient data.
+          Reports are JSON; the draft leaves the schema to a later revision.
         </p>
 
         {/* ------------------------------------------------ parsing */}
@@ -266,7 +316,16 @@ export default function Records() {
           <li>
             A repeated tag name makes the record <strong>malformed</strong>.
           </li>
-          <li>Whitespace must not appear within a tag value.</li>
+          <li>
+            A record may contain only printable US-ASCII (octets 0x20–0x7E) and
+            horizontal tab. Anything else — CR, LF, NUL, DEL, or a non-ASCII
+            space such as U+00A0 — makes it <strong>malformed</strong>.
+          </li>
+          <li>
+            Whitespace means space and tab, nothing else. It is stripped around
+            tag names and values; whitespace left inside a value makes the
+            record <strong>malformed</strong>.
+          </li>
           <li>
             Multiple character-strings in one TXT RR are concatenated in order,
             without separators.
@@ -281,6 +340,25 @@ export default function Records() {
             SwornMail records coexist with everything else at the same name.
           </li>
         </ul>
+        <p className={CAPTION}>
+          The character rules are stated as octets on purpose: what counts as
+          &ldquo;whitespace&rdquo; is exactly where independent parsers quietly
+          disagree, and a disagreement here would be a disagreement about a
+          security decision.
+        </p>
+        <div className={NOTE}>
+          <p className={PROSE}>
+            <strong>Acceptance tightened within <C>-01</C>.</strong> Three
+            record shapes that early <C>-01</C> implementations accepted are now
+            malformed: a <C>u</C> coarser than a listed prefix, a <C>rua</C>{" "}
+            outside the conservative <C>mailto:</C> form, and any octet outside
+            printable ASCII plus tab. Token bytes are unchanged and every
+            previously published vector still passes unmodified; new record
+            and authorisation vectors were added. <C>sworn genrecord</C> never
+            emitted any of these shapes.
+            If you wrote a record by hand, check it with <C>sworn record</C>.
+          </p>
+        </div>
 
         {/* ------------------------------------------------ prefixes */}
         <h2 className={H2} id="constraints">
@@ -293,8 +371,11 @@ export default function Records() {
           you.
         </p>
         <p className={`${PROSE} mt-4`}>
-          Prefix lengths run from <C>/32</C> to <C>/64</C>. Space outside global
-          unicast, and ranges reserved for transition mechanisms, are refused.
+          Prefix lengths run from <C>/32</C> to <C>/64</C>, and /48 to /64 is
+          the recommended range; the /32 floor stops one attestation covering
+          unrelated networks. A prefix must lie inside global unicast (
+          <C>2000::/3</C>) and must not overlap Teredo (<C>2001::/32</C>) or
+          6to4 (<C>2002::/16</C>).
         </p>
 
         {/* ------------------------------------------------ discovery */}
@@ -337,9 +418,18 @@ export default function Records() {
             ability to sign attestations that bind your domain&rsquo;s
             reputation; pointing <C>_prefixes._sworn</C> at them gives them
             control of which prefixes you appear to stand behind. Remove the
-            CNAME when the relationship ends.
+            CNAME when the relationship ends: a dangling CNAME whose target zone
+            someone else later registers hands them your attestation identity.
           </p>
         </div>
+        <p className={PROSE}>
+          Every link in a delegated CNAME chain is part of the DNS trust path,
+          which is one more reason to{" "}
+          <a href="/verify/#dns" className={LINK}>
+            sign your zone with DNSSEC
+          </a>
+          .
+        </p>
       </DocShell>
       <Footer />
     </>

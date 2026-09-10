@@ -50,8 +50,13 @@ written from memory:
   `2000::/3`) read from `draft-kafedzhy-swornmail-01.md` and confirmed against
   `MinPrefixLen`/`MaxPrefixLen` in the Go reference.
 - The result table is the draft's own table.
-- Terminal output is real `sworn` output; exit codes match the CLI's own usage
-  text. The only edits are truncating a base64 key and eliding a token value.
+- Terminal output is real `sworn` output, re-captured against the current CLI
+  (which now applies policy authorisation and reports the observed unit); exit
+  codes match the CLI's own usage text. The only edits are truncating a base64
+  key, eliding a token value, and leaving out the CLI's next-step hints and
+  DNS-panel forms for length.
+- Reputation semantics, result causes, Mode 2 check order and the record rules
+  follow the draft as of the policy-authorisation revision (`spec` `d2125ef`).
 - Module path and crate name confirmed from `go.mod` and `Cargo.toml`.
 - The differential figure is stated as reproducible with its `--fuzz` default,
   not as a fixed number, for the same reason as on swornmail.com.
@@ -73,6 +78,20 @@ Verified in a browser across all five pages: zero horizontal overflow at a
 320px viewport with all overflow confined to scroll containers, no
 heading-level jumps, one `h1` per page, and every text/background pair at
 5.89:1 or better in both themes against a 4.5 AA requirement.
+
+## Discovery files
+
+`public/` ships three small files next to `_headers`, all same-origin:
+
+- `favicon.svg`: the favicon as a real URL. Search engines do not use a
+  `data:` URI favicon.
+- `llms.txt`: a plain-text map of the documentation and the draft, for
+  assistants. It follows the site's stated intent that AI crawlers are
+  welcome.
+- `security.txt` (RFC 9116): served at `/.well-known/security.txt` by a 200
+  rewrite in `_redirects`, because `deploy.yml` fails on any dot-directory in
+  `out/`. **Its `Expires` field (2027-09-01) must be moved forward before
+  then**, or scanners will treat it as stale.
 
 ## Deployment state
 

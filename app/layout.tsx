@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   // Declared explicitly because `trailingSlash: true` means /deploy and
   // /deploy/ both resolve; without this a crawler picks its own winner.
   alternates: { canonical: "/" },
-  title: "SwornMail documentation",
+  title: "SwornMail documentation — IPv6 prefix attestation for SMTP",
   description:
     "Reference documentation for the SwornMail protocol: DNS record format, verification and result codes, operator deployment, and the reference implementations.",
   // No image is referenced on purpose: a preview fetcher pulling an image is
@@ -15,16 +15,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://swornmail.dev/",
-    title: "SwornMail documentation",
+    title: "SwornMail documentation — IPv6 prefix attestation for SMTP",
     description:
       "DNS record format, verification and result codes, operator deployment, and the reference implementations.",
   },
   twitter: { card: "summary" },
-  // Inline SVG favicon: no external request, no file to serve.
-  icons: {
-    icon:
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314487A'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h9' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E",
-  },
+  // Same-origin SVG favicon. Still no external request, and unlike the data:
+  // URI it replaces, it is a URL a search engine can fetch and show.
+  icons: { icon: "/favicon.svg" },
 };
 
 /**

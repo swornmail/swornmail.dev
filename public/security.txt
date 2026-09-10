@@ -1,0 +1,5 @@
+Contact: mailto:security@swornmail.dev
+Expires: 2027-09-01T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://swornmail.dev/.well-known/security.txt
+Policy: https://github.com/swornmail/spec/blob/main/SECURITY.md
