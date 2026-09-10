@@ -14,7 +14,7 @@ import {
 } from "./site-chrome";
 
 export const metadata = {
-  title: "SwornMail documentation",
+  title: "SwornMail documentation — IPv6 prefix attestation for SMTP",
   description:
     "What SwornMail is, what it does not do, and where to go next: record format, verification, deployment, implementations.",
 };
@@ -37,16 +37,18 @@ export default function Home() {
         <p className={LEDE}>
           An operator publishes a signed, verifiable claim that a range of IPv6
           address space is one accountable entity, staked on their domain name.
-          Receivers get a stable reputation unit instead of 2<sup>64</sup>
+          Receivers get a stable reputation key instead of 2<sup>64</sup>
           &nbsp;addresses they cannot reason about.
         </p>
 
         <div className={NOTE_FLAG}>
           <p className={PROSE}>
-            <strong>Status.</strong> SwornMail is an Internet-Draft, not an IETF
-            standard, and has no IETF consensus. The <C>-01</C> wire format is
-            frozen and backed by 62 published conformance vectors and two
-            independent implementations. There are no public deployments.
+            <strong>Status.</strong> SwornMail is specified in an
+            Internet-Draft that has not yet been submitted to the IETF. It is
+            not a standard and has no IETF consensus. The <C>-01</C> wire
+            format is frozen and backed by 85 published conformance vectors,
+            two independent verifiers and an rspamd module. There are no public
+            deployments.
           </p>
         </div>
 
@@ -63,15 +65,21 @@ export default function Home() {
             policy record
           </a>{" "}
           naming the prefixes they stand behind and the granularity at which
-          they are willing to be judged.
+          they ask to be judged.
         </p>
         <p className={`${PROSE} mt-4`}>
           A receiver, at connection time and before message data, establishes
           which operator is accountable for the connecting address and confirms
           the address really falls inside a prefix that operator attested. On{" "}
           <C>sworn=pass</C> it keys reputation on{" "}
-          <C>(operator domain, unit prefix)</C> rather than on an individual
-          address.
+          <C>(operator domain, observed /64)</C> — the connecting
+          address&rsquo;s own /64 — rather than on an individual address, and
+          widens that only with independent evidence that the operator controls
+          more. See{" "}
+          <a href="/verify/#on-pass" className={LINK}>
+            reputation semantics
+          </a>
+          .
         </p>
 
         <h3 className={H3}>Two deployment modes</h3>
@@ -79,7 +87,9 @@ export default function Home() {
           <strong>Mode 1, DNS-only.</strong> Publish the records; nothing in
           your mail software changes. The receiver discovers the operator from
           the connecting address. This is the baseline the protocol is designed
-          around and it is deployable today.
+          around and it is deployable today. The current revision marks it
+          experimental, so receivers should give it low weight until there is
+          operational experience.
         </p>
         <p className={`${PROSE} mt-4`}>
           <strong>Mode 2, signed token.</strong> An SMTP extension carries a
@@ -109,6 +119,12 @@ export default function Home() {
             why it works for a sender whose domain you have never seen.
           </li>
           <li>
+            <strong>It does not publish allocation sizes.</strong> RFC 9977 lets
+            the holder of an address block publish how large its end-sites
+            are. SwornMail answers a different question: which mail operator
+            accepts accountability for a prefix, stated at connection time.
+          </li>
+          <li>
             <strong>Attestation is not endorsement.</strong> Publishing a record
             does not ask anyone to trust you; it says who to hold responsible.
             Receivers and reputation services decide what that is worth.
@@ -116,8 +132,9 @@ export default function Home() {
           <li>
             <strong>It never makes treatment worse.</strong> Absence or failure
             of SwornMail must not be treated as worse than a receiver&rsquo;s
-            existing default for unattested IPv6. A failed verification
-            identifies no accountable party — see{" "}
+            existing default for unattested IPv6, for reputation or for
+            delivery. A failed verification identifies no accountable party —
+            see{" "}
             <a href="/verify/#semantics" className={LINK}>
               reputation semantics
             </a>

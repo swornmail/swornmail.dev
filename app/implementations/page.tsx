@@ -14,7 +14,9 @@ import {
   LABEL,
   CAPTION,
   ArticleSchema,
+  pageMetadata,
 } from "../site-chrome";
+import type { Metadata } from "next";
 
 // Single source for this page's title and description: `metadata` and the
 // TechArticle schema both read it, so they cannot drift apart.
@@ -25,13 +27,7 @@ const PAGE = {
     "Go reference and CLI, independent Rust verifier, Postfix milter, rspamd module, and the conformance vectors that hold them together.",
 };
 
-export const metadata = {
-  title: PAGE.title,
-  description: PAGE.description,
-  // Overrides the layout's canonical, which would otherwise point every
-  // page at the site root.
-  alternates: { canonical: PAGE.path },
-};
+export const metadata: Metadata = pageMetadata(PAGE);
 
 export default function Implementations() {
   return (
@@ -113,9 +109,43 @@ export default function Implementations() {
           </code>
         </pre>
         <p className={PROSE}>
-          <C>sworn.Verify</C> checks Mode 2 tokens; <C>sworn/discover</C> runs
-          Mode 1 discovery. The resolver is an interface, so both are testable
-          without DNS and can be pointed at a validating resolver in production.
+          A receiver verifying Mode 2 tokens against live DNS uses the staged
+          API, which enforces the protocol&rsquo;s check order: every local
+          check before any DNS, and the policy before the key.
+        </p>
+        <pre className="code-block my-4">
+          <code>
+            pending, err := sworn.PrepareVerification(token, source, now){" "}
+            <span className="tok-c">// no DNS</span>
+            {"\n"}
+            <span className="tok-c">
+              {"// fetch and parse _prefixes._sworn.<pending.Operator()>"}
+            </span>
+            {"\n"}
+            authorized, err := pending.Authorize(policy){" "}
+            <span className="tok-c">// no key query yet</span>
+            {"\n"}
+            <span className="tok-c">
+              {"// fetch and parse <pending.Selector()>._sworn.<pending.Operator()>"}
+            </span>
+            {"\n"}
+            result, err := authorized.VerifySignature(key)
+          </code>
+        </pre>
+        <p className={PROSE}>
+          Key reputation on <C>result.ObservedUnit</C>, not{" "}
+          <C>result.Unit</C>. An operator in testing mode comes back as{" "}
+          <C>sworn.ErrTestingMode</C> rather than a nil error, so{" "}
+          <C>err == nil</C> can never mean pass for an operator publishing{" "}
+          <C>t=y</C>. <C>sworn.Verify</C> is the no-I/O helper for when both
+          records are already in hand, and it requires the policy.{" "}
+          <C>sworn.VerifySignatureOnly</C> exists for conformance tooling and
+          must never be reported as a protocol pass.
+        </p>
+        <p className={`${PROSE} mt-4`}>
+          <C>sworn/discover</C> runs Mode 1 discovery. The resolver is an
+          interface, so both paths are testable without DNS and can be pointed
+          at a validating resolver in production.
         </p>
         <p className={CAPTION}>
           Dependencies are deliberately few: <C>fxamacker/cbor</C>,{" "}
@@ -128,9 +158,11 @@ export default function Implementations() {
         </h3>
         <p className={PROSE}>
           <C>cmd/sworn-milter</C> performs per-connection Mode 1 discovery and
-          stamps <C>Authentication-Results</C>. It strips inbound AR fields at
-          the trust boundary, and it is <strong>strictly fail-open</strong> — it
-          never rejects a message.
+          stamps <C>Authentication-Results</C> with both <C>policy.unit</C> and{" "}
+          <C>policy.observed</C>. A testing-mode operator is reported as{" "}
+          <C>sworn=none policy.testing=y policy.wouldbe=pass</C>, never as a
+          pass. It strips inbound AR fields at the trust boundary, and it is{" "}
+          <strong>strictly fail-open</strong> — it never rejects a message.
         </p>
         <div className={NOTE_FLAG}>
           <p className={PROSE}>
@@ -151,15 +183,25 @@ export default function Implementations() {
           independently surfaced three real draft/implementation contradictions
           before the format was frozen.
         </p>
+        <p className={`${PROSE} mt-4`}>
+          From 0.2, <C>verify</C> takes the policy record as well as the key and
+          returns an <C>Outcome</C>: an operator in testing mode is its own
+          variant, so it cannot be read as a pass without noticing, and{" "}
+          <C>Verified</C> carries <C>observed_unit</C> alongside{" "}
+          <C>unit</C>. Use 0.2 or later: 0.1 predates policy authorisation. If
+          crates.io does not yet list 0.2, build from the repository.
+        </p>
 
         <h2 className={H2} id="rspamd">
           Lua — rspamd module
         </h2>
         <p className={PROSE}>
-          A self-contained rspamd module, informational by default and
-          fail-open. Its protocol logic makes no rspamd calls — the resolver is
-          injected — so it runs under plain Lua and can be driven by the
-          differential harness.
+          A self-contained rspamd module for Mode 1, informational by default
+          and fail-open: every symbol scores zero until you give it weight. It
+          reports testing-mode operators as <C>SWORN_TESTING</C> and emits both{" "}
+          <C>policy.unit</C> and <C>policy.observed</C>. Its protocol logic
+          makes no rspamd calls — the resolver is injected — so it runs under
+          plain Lua and can be driven by the differential harness.
         </p>
 
         {/* ------------------------------------------ conformance */}
@@ -176,7 +218,8 @@ export default function Implementations() {
           Test vectors
         </h3>
         <p className={PROSE}>
-          62 vectors — 48 token, 14 record — published at{" "}
+          85 vectors — 48 token, 27 record and 10 policy-authorisation cases —
+          published at{" "}
           <a
             href="https://github.com/swornmail/spec/tree/main/test-vectors"
             className={LINK}
@@ -210,10 +253,12 @@ export default function Implementations() {
         </pre>
         <p className={PROSE}>
           Both report <strong>zero divergences</strong>. The token corpus size
-          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,048 cases —
-          so the figure is reproducible rather than a marketing number. Run it
-          larger; the divergence count should stay at zero. If it does not, that
-          is a bug worth reporting.
+          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,059 cases —
+          so the figure is reproducible rather than a marketing number. The
+          record corpus is fixed at 259 cases: 236 policy records and 23
+          source-eligibility checks. Run the token harness larger; the
+          divergence count should stay at zero. If it does not, that is a bug
+          worth reporting.
         </p>
         <div className={NOTE}>
           <p className={PROSE}>

@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects and rewrites.
+#
+# RFC 9116 puts security.txt under /.well-known/, but deploy.yml fails the
+# build on any dot-directory in out/ (it exists to catch leaked tooling
+# state such as .omc/). A 200 rewrite serves the file at the standard path
+# without weakening that guard.
+/.well-known/security.txt /security.txt 200

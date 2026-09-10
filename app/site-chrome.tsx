@@ -1,4 +1,30 @@
+import type { Metadata } from "next";
 import { ThemeToggle } from "./theme-toggle";
+
+/**
+ * Page metadata built from the same PAGE constant the TechArticle schema
+ * reads. Next replaces a nested `openGraph` object wholesale rather than
+ * merging it with the layout's, so every field is restated here — a page that
+ * set only its title would still share as the site root.
+ */
+export function pageMetadata({
+  path,
+  title,
+  description,
+}: {
+  path: string;
+  title: string;
+  description: string;
+}): Metadata {
+  return {
+    title,
+    description,
+    // Overrides the layout's canonical, which would otherwise point every
+    // page at the site root.
+    alternates: { canonical: path },
+    openGraph: { type: "article", url: path, title, description },
+  };
+}
 
 /* Shared class strings, named because they encode a decision rather than to
    save characters. Kept identical to swornmail.com so the two sites read as
