@@ -163,12 +163,17 @@ export default function Implementations() {
           <C>sworn=none policy.testing=y policy.wouldbe=pass</C>, never as a
           pass. It strips inbound AR fields at the trust boundary, and it is{" "}
           <strong>strictly fail-open</strong> — it never rejects a message.
+          Setup:{" "}
+          <a href="/milter/" className={LINK}>
+            receive with Postfix
+          </a>
+          .
         </p>
         <div className={NOTE_FLAG}>
           <p className={PROSE}>
-            <strong>A milter cannot carry Mode 2.</strong> Milters run after the
-            command phase, so they cannot advertise an EHLO keyword or take an
-            SMTP verb. Mode 2 needs an MTA that speaks the extension, or a
+            <strong>A milter cannot carry Mode 2.</strong> Milters see the SMTP
+            conversation but cannot extend it: they cannot advertise an EHLO
+            keyword or take a new SMTP verb. Mode 2 needs an MTA that speaks the extension, or a
             proxy in front. This is a real limitation, not an oversight.
           </p>
         </div>

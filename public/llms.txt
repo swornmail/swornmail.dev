@@ -8,6 +8,7 @@ These pages are non-normative. Where they disagree with the Internet-Draft, the 
 
 - [Overview](https://swornmail.dev/): what SwornMail does, and what it deliberately does not do
 - [Deploy as an operator](https://swornmail.dev/deploy/): generate a key and DNS records, publish, verify; starts in observe-only mode
+- [Receive with Postfix](https://swornmail.dev/milter/): run the reference milter with Postfix, keep it fail-open, read the results it adds
 - [DNS records](https://swornmail.dev/records/): key and policy record tags, parsing rules, prefix constraints, delegation
 - [Verification and results](https://swornmail.dev/verify/): result values, reputation semantics, DNS trust, both deployment modes
 - [Implementations](https://swornmail.dev/implementations/): Go reference and CLI, Rust verifier, Postfix milter, rspamd module, conformance vectors
