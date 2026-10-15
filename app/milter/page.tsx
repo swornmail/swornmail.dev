@@ -131,6 +131,18 @@ export default function Milter() {
           It needs no privileges, no configuration file and no state. Run it
           under your service manager as an ordinary user.
         </p>
+        <div className={NOTE_FLAG}>
+          <p className={PROSE}>
+            <strong>Check that port 10025 is free first.</strong> Content-filter
+            setups, amavis among them, often have Postfix listen on{" "}
+            <C>127.0.0.1:10025</C> to take filtered mail back.{" "}
+            <C>postconf -M | grep 10025</C> shows whether Postfix has a service
+            there, and <C>ss -ltn</C> (or <C>lsof -iTCP -sTCP:LISTEN</C> on
+            macOS and the BSDs) shows anything else. If it&rsquo;s taken,
+            run <C>sworn-milter --listen tcp:127.0.0.1:&lt;free port&gt;</C> and
+            use the same port in <C>smtpd_milters</C> below.
+          </p>
+        </div>
 
         <h2 className={H2} id="postfix">
           3. Point Postfix at it
@@ -151,12 +163,12 @@ export default function Milter() {
             <strong>
               <C>default_action=accept</C> is what keeps this fail-open.
             </strong>{" "}
-            The milter never refuses mail, but if it is stopped or times out,
-            Postfix falls back to <C>milter_default_action</C>:{" "}
-            <C>tempfail</C>, or <C>shutdown</C> since Postfix 3.11. Either one
-            turns a stopped milter into refused mail. Set inside the braces, it
-            applies to this milter only, so your other milters keep failing the
-            way they do now. Per-milter settings need Postfix 3.0 or later.
+            The milter never refuses mail. Without that setting, a stopped or
+            timed-out milter gets the global <C>milter_default_action</C>:{" "}
+            <C>tempfail</C>, or <C>shutdown</C> since Postfix 3.11, and either
+            one turns it into refused mail. Set inside the braces, it covers
+            this milter only, so your other milters keep failing the way they
+            do now. Per-milter settings need Postfix 3.0 or later.
             Don&rsquo;t set the global <C>milter_default_action = accept</C>{" "}
             instead: that would also let mail through unscanned whenever a
             virus or spam milter is down.
