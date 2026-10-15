@@ -87,6 +87,7 @@ export const NAV: { title: string; items: { href: string; label: string }[] }[] 
     items: [
       { href: "/", label: "Overview" },
       { href: "/deploy/", label: "Deploy as an operator" },
+      { href: "/milter/", label: "Receive with Postfix" },
     ],
   },
   {

@@ -96,7 +96,7 @@ export default function Home() {
           compact COSE-signed token verified statelessly at connection time,
           for stronger source authenticity. It requires software that speaks
           the extension — notably, a milter cannot advertise it, because
-          milters run after the command phase.
+          milters can watch the SMTP conversation but cannot extend it.
         </p>
 
         <h2 className={H2} id="what-it-does-not-do">
@@ -160,6 +160,17 @@ export default function Home() {
             <p className="text-sm text-muted">
               Generate a key, generate records, publish, verify. Starts in
               observe-only mode by default.
+            </p>
+          </div>
+          <div>
+            <h3 className="mb-1 text-[0.9375rem] font-semibold">
+              <a href="/milter/" className={LINK}>
+                Receive with Postfix
+              </a>
+            </h3>
+            <p className="text-sm text-muted">
+              Run the milter next to Postfix, keep it fail-open, and read the
+              results it adds to inbound mail.
             </p>
           </div>
           <div>

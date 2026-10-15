@@ -269,10 +269,14 @@ export default function Deploy() {
         </h2>
         <p className={PROSE}>
           If you run inbound mail, see{" "}
+          <a href="/milter/" className={LINK}>
+            receive with Postfix
+          </a>{" "}
+          to set up the milter,{" "}
           <a href="/implementations/" className={LINK}>
             implementations
           </a>{" "}
-          for the Postfix milter and the rspamd module, and{" "}
+          for the rspamd module, and{" "}
           <a href="/verify/#semantics" className={LINK}>
             reputation semantics
           </a>{" "}
