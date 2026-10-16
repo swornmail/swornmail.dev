@@ -144,6 +144,20 @@ export default function Rspamd() {
           </tr>
           <tr>
             <td className="whitespace-nowrap">
+              <C>ineligible_prefixes</C>
+            </td>
+            <td>
+              <C>[]</C>
+            </td>
+            <td>
+              IPv6 prefixes never matched to an operator. If rspamd sees IPv4
+              clients through NAT64 or SIIT, list the translation prefix:
+              every translated client appears inside it. A malformed entry
+              disables the module, with an error in the log.
+            </td>
+          </tr>
+          <tr>
+            <td className="whitespace-nowrap">
               <C>lib_path</C>
             </td>
             <td>
