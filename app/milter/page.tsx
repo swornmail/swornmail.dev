@@ -126,6 +126,19 @@ export default function Milter() {
               <C>temperror</C>.
             </td>
           </tr>
+          <tr>
+            <td className="whitespace-nowrap">
+              <C>--ineligible-prefix</C>
+            </td>
+            <td>none</td>
+            <td>
+              IPv6 prefixes never matched to an operator, comma-separated or
+              repeated. If this host reaches IPv4 clients through NAT64 or SIIT,
+              list the translation prefix: every translated client appears
+              inside it. A source there gets <C>sworn=none</C> with no lookup.
+              A malformed prefix stops the milter at startup.
+            </td>
+          </tr>
         </Table>
         <p className={PROSE}>
           It needs no privileges, no configuration file and no state. Run it
