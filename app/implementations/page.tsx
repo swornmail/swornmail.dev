@@ -227,7 +227,7 @@ export default function Implementations() {
           Test vectors
         </h3>
         <p className={PROSE}>
-          88 vectors — 51 token, 27 record and 10 policy-authorisation cases —
+          91 vectors — 54 token, 27 record and 10 policy-authorisation cases —
           published at{" "}
           <a
             href="https://github.com/swornmail/spec/tree/main/test-vectors"
@@ -262,7 +262,7 @@ export default function Implementations() {
         </pre>
         <p className={PROSE}>
           Both report <strong>zero divergences</strong>. The token corpus size
-          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,059 cases —
+          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,065 cases —
           so the figure is reproducible rather than a marketing number. The
           record corpus is fixed at 259 cases: 236 policy records and 23
           source-eligibility checks. Run the token harness larger; the

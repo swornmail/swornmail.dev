@@ -391,6 +391,12 @@ export default function Verify() {
           recommends. Both name the same algorithm, so a verifier accepts
           both. Any other label is a <C>permerror</C>.
         </p>
+        <p className={PROSE}>
+          Verification is strict. A public key or signature <C>R</C> of
+          small order is a signature failure: under the identity key, one
+          fixed signature verifies for every message, so a domain that
+          publishes such a key has in effect published its private key.
+        </p>
       </DocShell>
       <Footer />
     </>
