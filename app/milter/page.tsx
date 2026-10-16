@@ -373,7 +373,7 @@ export default function Milter() {
         <p className={PROSE}>
           It doesn&rsquo;t score or filter. It adds a result, and acting on it
           is up to whatever reads the header next: your content filter, or the{" "}
-          <a href="/implementations/#rspamd" className={LINK}>
+          <a href="/rspamd/" className={LINK}>
             rspamd module
           </a>{" "}
           if you would rather run the check there. It also can&rsquo;t verify

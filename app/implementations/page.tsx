@@ -206,7 +206,11 @@ export default function Implementations() {
           reports testing-mode operators as <C>SWORN_TESTING</C> and emits both{" "}
           <C>policy.unit</C> and <C>policy.observed</C>. Its protocol logic
           makes no rspamd calls — the resolver is injected — so it runs under
-          plain Lua and can be driven by the differential harness.
+          plain Lua and can be driven by the differential harness. Setup:{" "}
+          <a href="/rspamd/" className={LINK}>
+            receive with rspamd
+          </a>
+          .
         </p>
 
         {/* ------------------------------------------ conformance */}

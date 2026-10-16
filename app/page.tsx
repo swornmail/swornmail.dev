@@ -175,6 +175,17 @@ export default function Home() {
           </div>
           <div>
             <h3 className="mb-1 text-[0.9375rem] font-semibold">
+              <a href="/rspamd/" className={LINK}>
+                Receive with rspamd
+              </a>
+            </h3>
+            <p className="text-sm text-muted">
+              Add the module to rspamd, make sure forged results are removed,
+              and read the symbols and results it adds.
+            </p>
+          </div>
+          <div>
+            <h3 className="mb-1 text-[0.9375rem] font-semibold">
               <a href="/records/" className={LINK}>
                 DNS records
               </a>

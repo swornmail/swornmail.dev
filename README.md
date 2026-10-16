@@ -37,6 +37,8 @@ nothing before invoking wrangler.
 |---|---|
 | `/` | What SwornMail is, and what it deliberately does not do |
 | `/deploy/` | Operator guide: keygen, genrecord, publish, verify, leaving testing mode |
+| `/milter/` | Receiver guide: the reference milter with Postfix, kept fail-open |
+| `/rspamd/` | Receiver guide: the rspamd module, and the config that removes forged results |
 | `/records/` | Every record tag, whether it is required, what makes a record malformed |
 | `/verify/` | The five result values, reputation semantics, both deployment modes |
 | `/implementations/` | Libraries, integrations, vectors, differential harnesses |
@@ -74,7 +76,7 @@ Reference documentation has to work with scripting off, and the whole map fits
 on screen anyway. `NAV` in `app/site-chrome.tsx` is the single source of truth
 for the map.
 
-Verified in a browser across all five pages: zero horizontal overflow at a
+Verified in a browser across all seven pages: zero horizontal overflow at a
 320px viewport with all overflow confined to scroll containers, no
 heading-level jumps, one `h1` per page, and every text/background pair at
 5.89:1 or better in both themes against a 4.5 AA requirement.

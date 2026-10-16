@@ -88,6 +88,7 @@ export const NAV: { title: string; items: { href: string; label: string }[] }[] 
       { href: "/", label: "Overview" },
       { href: "/deploy/", label: "Deploy as an operator" },
       { href: "/milter/", label: "Receive with Postfix" },
+      { href: "/rspamd/", label: "Receive with rspamd" },
     ],
   },
   {
