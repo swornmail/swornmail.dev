@@ -384,6 +384,13 @@ export default function Verify() {
           record and reject a token that disagrees, rather than letting the
           token choose how it is checked.
         </p>
+        <p className={PROSE}>
+          For <C>k=ed25519</C> a token may label its algorithm either way: the
+          polymorphic <C>EdDSA</C> (-8), which the reference signer emits, or the
+          fully-specified <C>Ed25519</C> (-19) from RFC 9864, which IANA now
+          recommends. Both name the same algorithm, so a verifier accepts
+          both. Any other label is a <C>permerror</C>.
+        </p>
       </DocShell>
       <Footer />
     </>

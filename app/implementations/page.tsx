@@ -227,7 +227,7 @@ export default function Implementations() {
           Test vectors
         </h3>
         <p className={PROSE}>
-          85 vectors — 48 token, 27 record and 10 policy-authorisation cases —
+          88 vectors — 51 token, 27 record and 10 policy-authorisation cases —
           published at{" "}
           <a
             href="https://github.com/swornmail/spec/tree/main/test-vectors"
