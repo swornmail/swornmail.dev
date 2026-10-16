@@ -392,6 +392,8 @@ export default function Verify() {
           both. Any other label is a <C>permerror</C>.
         </p>
         <p className={PROSE}>
+          A token longer than 3072 octets is malformed and is rejected before
+          it is decoded; the longest SWORN line carries at most 3066 octets of token.
           Verification is strict. A public key or signature <C>R</C> of
           small order is a signature failure: under the identity key, one
           fixed signature verifies for every message, so a domain that
