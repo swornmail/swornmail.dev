@@ -1,4 +1,4 @@
-Copyright 2026 Valerii Kafedzhy (https://vkafed.com)
+Copyright 2026 Val Kafedzhy (https://vkafed.com)
 
 The content of this site — its text, layout and styling — is licensed under
 the Apache License, Version 2.0, matching the SwornMail protocol repositories.
