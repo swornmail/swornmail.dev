@@ -430,8 +430,10 @@ export default function Verify() {
             <strong>
               A <C>kid</C> that is not a selector.
             </strong>{" "}
-            One DNS label: 1 to 63 letters, digits or hyphens, not starting or
-            ending with a hyphen.
+            It must be an untagged CBOR byte string holding the selector in
+            ASCII: one DNS label, 1 to 63 letters, digits or hyphens, not
+            starting or ending with a hyphen. A text string is rejected even
+            when it spells a valid label, and so is a tagged value.
           </li>
           <li>
             <strong>A payload key that is not an integer.</strong> Every key
@@ -498,9 +500,14 @@ export default function Verify() {
           <C>501 5.5.2</C>. The decoded token, the CBOR octets themselves, is
           limited to 3072 octets by the reference verifiers. They compare the
           length before any CBOR parsing and report a longer token as
-          malformed. That last limit comes from the implementations and the
-          published vectors; the draft&rsquo;s own text says only that a token
-          should not exceed 512 octets. A 4096-octet line has room for 4088
+          malformed. With the reference libraries that check is always on and
+          has no setting, and the published vectors pin it: a token of exactly
+          3072 octets passes and a longer one is malformed. The published
+          draft&rsquo;s text does not state that limit yet. What it says about
+          size is a recommendation to whoever issues tokens: one with a
+          classical signature should not exceed 512 octets. A verifier written
+          from that text alone needs the 3072-octet check as well to agree
+          with the vectors. A 4096-octet line has room for 4088
           base64url characters, which is 3066 octets of token, so a token that
           arrives in one <C>SWORN</C> command never reaches it.
         </p>

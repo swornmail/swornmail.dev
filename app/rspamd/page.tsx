@@ -290,6 +290,25 @@ export default function Rspamd() {
             as <C>none</C>.
           </li>
           <li>
+            <strong>Mail rspamd never changed looks the same.</strong> rspamd
+            only asks for the header changes; the MTA makes them, and in this
+            setup that means Postfix calling rspamd as a milter. A Postfix
+            service whose{" "}
+            <C>smtpd_milters</C> does not list rspamd hands it nothing. Mail
+            scanned some other way, with <C>rspamc</C> or by a client that
+            does not apply what rspamd returns, gets the symbol inside rspamd
+            and keeps every inbound field. Nothing failed in either case, so
+            no outage alert fires. A downstream filter therefore needs
+            evidence, message by message, that the mail came through a
+            service where rspamd runs as a milter. The message cannot supply
+            it: the module marks a message only with the result field, which
+            a sender can write too. What can is the route. Feed that filter
+            only from services you have checked (
+            <C>postconf -P | grep milters</C> lists the ones that override
+            the setting), and have it treat a <C>sworn</C> result on mail
+            from any other route as <C>none</C>.
+          </li>
+          <li>
             <strong>Or leave no gap.</strong> The gap exists only when Postfix
             accepts mail it could not hand to rspamd. If your rspamd milter
             entry defers mail instead, nothing is delivered unscanned and no
@@ -533,9 +552,10 @@ export default function Rspamd() {
           <a href="/verify/#dns" className={LINK}>
             trust in DNS
           </a>
-          ). A lookup that times out or fails outright, or reaching the limit,
-          gives <C>temperror</C>, never <C>none</C>, so a sender&rsquo;s
-          attestation can&rsquo;t be erased by breaking their DNS. A record
+          ). A lookup that times out or fails outright, or a walk that would
+          need an eleventh lookup, gives <C>temperror</C>, never{" "}
+          <C>none</C>: the tenth is still made, and its answer can still
+          confirm an operator. That way a sender&rsquo;s attestation can&rsquo;t be erased by breaking their DNS. A record
           that simply isn&rsquo;t there gives <C>none</C>.
         </p>
 

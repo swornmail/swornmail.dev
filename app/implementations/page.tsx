@@ -172,6 +172,20 @@ export default function Implementations() {
           </code>
         </pre>
         <p className={PROSE}>
+          <C>lookupTXT</C> is yours to write, and the result depends on what
+          it does. Query the name as absolute, with a trailing dot, so the
+          resolver&rsquo;s search list is not tried: it can turn a lookup
+          failure into a name that does not exist. Count the TXT records at the name that begin with{" "}
+          <C>v=SWORN1</C>: none is <C>none</C>, and more than one is a{" "}
+          <C>permerror</C>, never a choice between them. A name that does not
+          exist, or has no TXT records, is <C>none</C>; any other lookup
+          failure is <C>temperror</C>. One mapping is left to the caller: a
+          key record whose <C>k=</C> names an algorithm you do not implement, which{" "}
+          <C>sworn.ParseRecord</C> reports as{" "}
+          <C>sworn.ErrRecordAlgorithm</C>, is <C>none</C>, not a malformed
+          record.
+        </p>
+        <p className={`${PROSE} mt-4`}>
           Each stage returns on error, and that is not optional. A token that
           fails a local check leaves <C>pending</C> nil, so there is nothing to
           authorise and no name to look up. A token the policy does not

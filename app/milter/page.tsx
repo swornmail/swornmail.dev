@@ -389,6 +389,23 @@ export default function Milter() {
             <C>none</C>.
           </li>
           <li>
+            <strong>Mail that never reaches the milter looks the same.</strong>{" "}
+            <C>smtpd_milters</C> covers mail that arrives over SMTP at a
+            service using that setting. A service in <C>master.cf</C> that
+            overrides it, or mail handed to Postfix locally with{" "}
+            <C>sendmail</C>, which goes by <C>non_smtpd_milters</C> instead,
+            is delivered with whatever fields the sender wrote. Nothing
+            failed, so no outage alert fires. The consumer therefore needs
+            evidence, message by message, that the mail came in through a
+            service the milter is on. The message cannot supply it: the
+            milter adds only the result field, which a sender can write too,
+            and it keeps no log of the messages it handled. What can is the
+            route. Check which services override the setting (
+            <C>postconf -P | grep milters</C>), feed the consumer only from
+            services the milter is on, and have it treat a <C>sworn</C>{" "}
+            result on mail from any other route as <C>none</C>.
+          </li>
+          <li>
             <strong>Keep the consumer on your side of the boundary.</strong>{" "}
             A filter that takes mail from anywhere other than this Postfix
             instance sees fields this milter never had the chance to remove.
@@ -415,7 +432,9 @@ export default function Milter() {
             trust in DNS
           </a>
           ). A lookup that times out or fails outright (a SERVFAIL, say), or
-          reaching the limit, gives <C>temperror</C>, never <C>none</C>, so a
+          a walk that would need an eleventh question, gives{" "}
+          <C>temperror</C>, never <C>none</C>: the tenth is still asked, and
+          its answer can still confirm an operator. That way a
           sender&rsquo;s attestation can&rsquo;t be erased by breaking their
           DNS. A record that simply isn&rsquo;t there gives <C>none</C>.
         </p>

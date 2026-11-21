@@ -123,8 +123,9 @@ export default function Records() {
           <li>
             <strong>Canonical base64.</strong> The standard alphabet, with
             padding, and with the unused bits of the last character set to
-            zero. Each key then has exactly one spelling; a value that differs
-            only in those bits is rejected, not read as the same key.
+            zero. Each sequence of 32 octets then has exactly one accepted
+            spelling; a value that differs only in those bits is rejected, not
+            read as the same octets.
           </li>
           <li>
             <strong>Exactly 32 octets</strong> once decoded.
@@ -133,7 +134,12 @@ export default function Records() {
             <strong>An Ed25519 point.</strong> The 32 octets must decode as a
             point on the curve. Octets that do not are not a key, and the
             record is malformed instead of being a key that fails every
-            signature.
+            signature. This is a looser test than canonical point encoding.
+            The published vectors accept two encodings that RFC 8032 section
+            5.1.3 rejects: a <C>y</C> coordinate that is not reduced (
+            <C>p + 3</C>), and <C>x = 0</C> with the sign bit set. So one
+            point can have more than one accepted 32-octet encoding, though
+            each encoding has only one base64 spelling.
           </li>
         </ul>
         <p className={`${CAPTION} mt-4`}>
