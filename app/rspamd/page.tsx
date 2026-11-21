@@ -266,6 +266,58 @@ export default function Rspamd() {
           </p>
         </div>
         <p className={PROSE}>
+          So whatever acts on the result needs two things to be true, not
+          one: the field carries your authserv-id, and rspamd scanned the
+          message. The field cannot show the second. A forged{" "}
+          <C>mx.example.com; sworn=pass</C> that arrives during an outage is,
+          byte for byte, what the module would have written.
+        </p>
+        <ul className={`${PROSE} mt-4 list-disc space-y-2 pl-[1.1rem]`}>
+          <li>
+            <strong>Inside rspamd, act on the symbol.</strong>{" "}
+            <C>SWORN_PASS</C> exists only on a message rspamd scanned, and it
+            comes from the module&rsquo;s own lookup of the connecting
+            address, never from a header. A rule or score built on the symbol
+            cannot be fed by a forged field.
+          </li>
+          <li>
+            <strong>Downstream, the header alone is not enough.</strong> A
+            filter that reads the field after delivery cannot tell a forged
+            one from a real one, and a missing field proves nothing: the
+            module adds none for IPv4, local or authenticated senders. Alert
+            on Postfix failing to reach rspamd, and have that filter treat
+            every <C>sworn</C> result on mail accepted during the interval
+            as <C>none</C>.
+          </li>
+          <li>
+            <strong>Mail rspamd never changed looks the same.</strong> rspamd
+            only asks for the header changes; the MTA makes them, and in this
+            setup that means Postfix calling rspamd as a milter. A Postfix
+            service whose{" "}
+            <C>smtpd_milters</C> does not list rspamd hands it nothing. Mail
+            scanned some other way, with <C>rspamc</C> or by a client that
+            does not apply what rspamd returns, gets the symbol inside rspamd
+            and keeps every inbound field. Nothing failed in either case, so
+            no outage alert fires. A downstream filter therefore needs
+            evidence, message by message, that the mail came through a
+            service where rspamd runs as a milter. The message cannot supply
+            it: the module marks a message only with the result field, which
+            a sender can write too. What can is the route. Feed that filter
+            only from services you have checked (
+            <C>postconf -P | grep milters</C> lists the ones that override
+            the setting), and have it treat a <C>sworn</C> result on mail
+            from any other route as <C>none</C>.
+          </li>
+          <li>
+            <strong>Or leave no gap.</strong> The gap exists only when Postfix
+            accepts mail it could not hand to rspamd. If your rspamd milter
+            entry defers mail instead, nothing is delivered unscanned and no
+            forged field gets through this way. That is a decision about your
+            spam filter, and it trades delivery during an outage for it;
+            SwornMail does not ask for it.
+          </li>
+        </ul>
+        <p className={PROSE}>
           Don&rsquo;t narrow the deletion with <C>remove_ar_from</C>. It
           recognises a field only by a plain name at its start, so a forged{" "}
           <C>(c) mx.example.com; sworn=pass</C>, or one with the id in quotes,
@@ -500,9 +552,10 @@ export default function Rspamd() {
           <a href="/verify/#dns" className={LINK}>
             trust in DNS
           </a>
-          ). A lookup that times out or fails outright, or reaching the limit,
-          gives <C>temperror</C>, never <C>none</C>, so a sender&rsquo;s
-          attestation can&rsquo;t be erased by breaking their DNS. A record
+          ). A lookup that times out or fails outright, or a walk that would
+          need an eleventh lookup, gives <C>temperror</C>, never{" "}
+          <C>none</C>: the tenth is still made, and its answer can still
+          confirm an operator. That way a sender&rsquo;s attestation can&rsquo;t be erased by breaking their DNS. A record
           that simply isn&rsquo;t there gives <C>none</C>.
         </p>
 

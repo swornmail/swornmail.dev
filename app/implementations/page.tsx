@@ -115,24 +115,85 @@ export default function Implementations() {
         </p>
         <pre className="code-block my-4">
           <code>
-            pending, err := sworn.PrepareVerification(token, source, now){" "}
-            <span className="tok-c">// no DNS</span>
+            <span className="tok-c">{"// lookupTXT returns the one v=SWORN1 record at name."}</span>
             {"\n"}
-            <span className="tok-c">
-              {"// fetch and parse _prefixes._sworn.<pending.Operator()>"}
-            </span>
+            {"func verify(token []byte, source netip.Addr, now time.Time,\n"}
+            {"    lookupTXT func(name string) (string, error)) (sworn.Result, error) {\n"}
             {"\n"}
-            authorized, err := pending.Authorize(policy){" "}
-            <span className="tok-c">// no key query yet</span>
+            {"    pending, err := sworn.PrepareVerification(token, source, now) "}
+            <span className="tok-c">{"// no DNS"}</span>
             {"\n"}
-            <span className="tok-c">
-              {"// fetch and parse <pending.Selector()>._sworn.<pending.Operator()>"}
-            </span>
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err "}
+            <span className="tok-c">{"// pending is nil; no lookup follows"}</span>
             {"\n"}
-            result, err := authorized.VerifySignature(key)
+            {"    }\n"}
+            {"\n"}
+            {"    txt, err := lookupTXT(\"_prefixes._sworn.\" + pending.Operator())\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err\n"}
+            {"    }\n"}
+            {"    policy, err := sworn.ParsePolicyRecord(txt)\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err\n"}
+            {"    }\n"}
+            {"    authorized, err := pending.Authorize(policy)\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err "}
+            <span className="tok-c">{"// not authorised; the key is never fetched"}</span>
+            {"\n"}
+            {"    }\n"}
+            {"\n"}
+            {"    txt, err = lookupTXT(pending.Selector() + \"._sworn.\" + pending.Operator())\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err\n"}
+            {"    }\n"}
+            {"    key, err := sworn.ParseRecord(txt)\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err\n"}
+            {"    }\n"}
+            {"    result, err := authorized.VerifySignature(key.PublicKey)\n"}
+            {"    if errors.Is(err, sworn.ErrTestingMode) {\n"}
+            {"        "}
+            <span className="tok-c">{"// Every check passed, but the operator publishes t=y. Report"}</span>
+            {"\n"}
+            {"        "}
+            <span className="tok-c">{"// sworn=none policy.testing=y policy.wouldbe=pass; score nothing."}</span>
+            {"\n"}
+            {"        return result, err\n"}
+            {"    }\n"}
+            {"    if err != nil {\n"}
+            {"        return sworn.Result{}, err\n"}
+            {"    }\n"}
+            {"    return result, nil "}
+            <span className="tok-c">{"// pass: key reputation on result.ObservedUnit"}</span>
+            {"\n"}
+            {"}"}
           </code>
         </pre>
         <p className={PROSE}>
+          <C>lookupTXT</C> is yours to write, and the result depends on what
+          it does. Query the name as absolute, with a trailing dot, so the
+          resolver&rsquo;s search list is not tried: it can turn a lookup
+          failure into a name that does not exist. Count the TXT records at the name that begin with{" "}
+          <C>v=SWORN1</C>: none is <C>none</C>, and more than one is a{" "}
+          <C>permerror</C>, never a choice between them. A name that does not
+          exist, or has no TXT records, is <C>none</C>; any other lookup
+          failure is <C>temperror</C>. One mapping is left to the caller: a
+          key record whose <C>k=</C> names an algorithm you do not implement, which{" "}
+          <C>sworn.ParseRecord</C> reports as{" "}
+          <C>sworn.ErrRecordAlgorithm</C>, is <C>none</C>, not a malformed
+          record.
+        </p>
+        <p className={`${PROSE} mt-4`}>
+          Each stage returns on error, and that is not optional. A token that
+          fails a local check leaves <C>pending</C> nil, so there is nothing to
+          authorise and no name to look up. A token the policy does not
+          authorise must stop before the key lookup. A failed lookup or an
+          unparseable record is an error of its own: map a temporary DNS
+          failure to <C>temperror</C>, never to <C>none</C>.
+        </p>
+        <p className={`${PROSE} mt-4`}>
           Key reputation on <C>result.ObservedUnit</C>, not{" "}
           <C>result.Unit</C>. An operator in testing mode comes back as{" "}
           <C>sworn.ErrTestingMode</C> rather than a nil error, so{" "}
@@ -149,7 +210,8 @@ export default function Implementations() {
         </p>
         <p className={CAPTION}>
           Dependencies are deliberately few: <C>fxamacker/cbor</C>,{" "}
-          <C>veraison/go-cose</C>, and <C>emersion/go-milter</C> for the milter.
+          <C>veraison/go-cose</C>, <C>filippo.io/edwards25519</C>, and{" "}
+          <C>emersion/go-milter</C> for the milter.
           Otherwise standard library.
         </p>
 
@@ -193,8 +255,8 @@ export default function Implementations() {
           returns an <C>Outcome</C>: an operator in testing mode is its own
           variant, so it cannot be read as a pass without noticing, and{" "}
           <C>Verified</C> carries <C>observed_unit</C> alongside{" "}
-          <C>unit</C>. Use 0.2 or later: 0.1 predates policy authorisation. If
-          crates.io does not yet list 0.2, build from the repository.
+          <C>unit</C>. Use 0.2.5 or later: 0.1 predates policy authorisation, and
+          earlier 0.2 releases read a CBOR bignum as an integer key.
         </p>
 
         <h2 className={H2} id="rspamd">
@@ -227,7 +289,7 @@ export default function Implementations() {
           Test vectors
         </h3>
         <p className={PROSE}>
-          111 vectors — 62 token, 39 record and 10 policy-authorisation cases —
+          123 vectors — 74 token, 39 record and 10 policy-authorisation cases —
           published at{" "}
           <a
             href="https://github.com/swornmail/spec/tree/main/test-vectors"
@@ -262,9 +324,9 @@ export default function Implementations() {
         </pre>
         <p className={PROSE}>
           Both report <strong>zero divergences</strong>. The token corpus size
-          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,065 cases —
+          is a parameter — <C>--fuzz</C> defaults to 3000, giving 3,155 cases —
           so the figure is reproducible rather than a marketing number. The
-          record corpus is fixed at 259 cases: 236 policy records and 23
+          record corpus is fixed at 266 cases: 243 policy records and 23
           source-eligibility checks. Run the token harness larger; the
           divergence count should stay at zero. If it does not, that is a bug
           worth reporting.

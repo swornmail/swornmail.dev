@@ -46,7 +46,7 @@ export default function Home() {
             <strong>Status.</strong> SwornMail is specified in an
             Internet-Draft that has not yet been submitted to the IETF. It is
             not a standard and has no IETF consensus. The <C>-01</C> wire
-            format is frozen and backed by 85 published conformance vectors,
+            format is frozen and backed by 123 published conformance vectors,
             two independent verifiers and an rspamd module. There are no public
             deployments.
           </p>

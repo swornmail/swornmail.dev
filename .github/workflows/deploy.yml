@@ -66,18 +66,120 @@ jobs:
         # index.html would let a reference on /deploy/, /records/, /verify/ or
         # /implementations/ ship green.
         run: |
-          fail=0
-          while IFS= read -r -d '' f; do
-            if grep -oE '(src|href)="https?://[^"]*"' "$f" \
-               | grep -vE 'github\.com|crates\.io|swornmail\.com|swornmail\.dev|w3\.org'; then
-              echo "::error::$f references an external resource"
-              fail=1
-            fi
-          done < <(find out -name '*.html' -print0)
-          if [ "$fail" -ne 0 ]; then
+          # The old form of this check matched only src="https://…" and
+          # href="https://…", then waved through any allowlisted domain. A
+          # font in a stylesheet's url(), an @import, a srcset entry, a
+          # protocol-relative //host reference or a script on an allowlisted
+          # host all passed. The rule now is by kind, not by domain: a
+          # reference the browser FETCHES must be same-origin, written
+          # root-relative or as a data: URL; a reference the reader FOLLOWS
+          # may point anywhere. So the only places an off-site URL may appear
+          # are the href of an <a>, the href of <link rel="canonical"> and the
+          # content of a <meta>. Any other attribute of any tag, and every
+          # url(), @import and image-set() in exported CSS, <style> blocks and
+          # style attributes, fails the build.
+          #
+          # This catches drift, not obfuscation: it reads the export as text
+          # and does not decode entities or run scripts. The CSP in _headers
+          # is what holds in the browser; this is what stops the page and the
+          # CSP from disagreeing in the first place.
+          set -euo pipefail
+
+          # An authority (//host) or a scheme that fetches.
+          ext='//|(https?|ftp|wss?):'
+          val="(\"[^\"]*\"|'[^']*'|[^[:space:]>]*)"
+
+          # grep exits 1 for "no match", the good outcome, and 2 when it could
+          # not scan. Only the first may pass: every pipeline below runs under
+          # pipefail, so a scanner that breaks fails the step instead of
+          # reporting a clean export.
+          quiet() { "$@" || [ "$?" -eq 1 ]; }
+
+          # One line per tag, lowercased: "name attributes>text that follows".
+          split() { tr '\n\r\t' '   ' < "$1" | tr 'A-Z' 'a-z' | tr '<' '\n'; }
+
+          # Each tag with its text dropped and the navigation-only attributes
+          # removed. Whatever is left must not point off-site. A tag that does
+          # not parse is kept whole, so it is judged with its text included.
+          markup() {
+            split "$1" | quiet grep -a -E '^[a-z]' | quiet grep -a -vE '^style[[:space:]>]' \
+              | sed -E \
+                  -e "s/^(([^>\"']|\"[^\"]*\"|'[^']*')*)>.*\$/\\1/" \
+                  -e "/^a[[:space:]]/s/[[:space:]]href=$val//" \
+                  -e "/^meta[[:space:]]/s/[[:space:]]content=$val//" \
+                  -e "/^link([[:space:]].*)?[[:space:]]rel=\"canonical\"/{" \
+                  -e "/rel=.*rel=/!s/[[:space:]]href=$val//" \
+                  -e "}" \
+                  -e 's#[[:space:]]xmlns(:[a-z]+)?="http://www\.w3\.org/[a-z0-9/]*"##g' \
+              | quiet grep -a -E "$ext"
+          }
+
+          # Lowercased CSS on stdin. data: URLs are inline, not requests.
+          styles() {
+            quiet grep -a -oE 'url\([^)]*\)|@import[^;]*|image-set\([^;}]*' \
+              | quiet grep -a -vE "^url\([[:space:]]*[\"']?data:" \
+              | quiet grep -a -E "$ext"
+          }
+
+          # Prints one line per off-site resource reference under $1.
+          scan() {
+            local f
+            find "$1" -type f \( -name '*.html' -o -name '*.svg' \) -print0 > "$work/markup"
+            find "$1" -type f -name '*.css' -print0 > "$work/css"
+            while IFS= read -r -d '' f; do
+              markup "$f" | sed "s|^|$f: <|"
+              split "$f" | quiet grep -a -E '^style[[:space:]>]' | styles | sed "s|^|$f: |"
+            done < "$work/markup"
+            while IFS= read -r -d '' f; do
+              tr '\n\r\t' '   ' < "$f" | tr 'A-Z' 'a-z' | styles | sed "s|^|$f: |"
+            done < "$work/css"
+          }
+
+          work=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/same-origin.XXXXXX")
+
+          # Self-test. Eight planted violations, one per line, next to the
+          # forms that must stay legal. If the scanner does not report exactly
+          # the eight, it is blind or over-eager on this runner and nothing it
+          # says about out/ can be believed.
+          mkdir "$work/canary"
+          printf '%s\n' \
+            '<script src="https://cdn.example/a.js"></script>' \
+            '<link rel="stylesheet" href="//fonts.example/a.css">' \
+            '<img src="/a.png" srcset="/a.png 1x, https://img.example/a.png 2x">' \
+            '<p style="background:url(https://img.example/b.png)">text</p>' \
+            '<style>@import "https://fonts.example/c.css";</style>' \
+            '<style>@font-face{src:url(https://fonts.example/f.woff2)}</style>' \
+            '<a href="https://example.org/">a link out is navigation</a>' \
+            '<link rel="canonical" href="https://example.org/">' \
+            '<meta property="og:url" content="https://example.org/">' \
+            '<link rel="icon" href="/favicon.svg"><script src="/a.js"></script>' \
+            > "$work/canary/c.html"
+          printf '%s\n' \
+            '@import url(//fonts.example/d.css);' \
+            'a{background:url("https://img.example/e.png")}' \
+            'b{background:url(data:image/png;base64,AA==);src:url(/f.woff2)}' \
+            > "$work/canary/c.css"
+          scan "$work/canary" > "$work/canary.hits"
+          seen=$(($(wc -l < "$work/canary.hits")))
+          if [ "$seen" -ne 8 ]; then
+            echo "::error::scanner self-test planted 8 violations and saw $seen; refusing to pass an export it cannot read"
+            cat "$work/canary.hits"
             exit 1
           fi
-          echo "no external resource references, checked $(find out -name '*.html' | wc -l) pages"
+
+          scan out > "$work/hits"
+          pages=$(($(tr -cd '\0' < "$work/markup" | wc -c)))
+          sheets=$(($(tr -cd '\0' < "$work/css" | wc -c)))
+          if [ "$pages" -eq 0 ] || [ "$sheets" -eq 0 ]; then
+            echo "::error::found $pages pages and $sheets stylesheets in out/; nothing was checked"
+            exit 1
+          fi
+          if [ -s "$work/hits" ]; then
+            echo "::error::the export loads a resource from another origin"
+            cat "$work/hits"
+            exit 1
+          fi
+          echo "no off-site resource references in $pages pages and $sheets stylesheets"
 
       - name: Check no local tooling state leaked into the export
         # A manual `wrangler pages deploy out` run from this working copy
@@ -127,7 +229,7 @@ jobs:
         # A half-configured repository skips the publish rather than failing a
         # run for a reason that is not a defect.
         if: env.CF_TOKEN != '' && env.CF_ACCOUNT != ''
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

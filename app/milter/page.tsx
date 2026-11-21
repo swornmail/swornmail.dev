@@ -362,23 +362,98 @@ export default function Milter() {
             wrote until the milter is back.
           </p>
         </div>
+        <p className={PROSE}>
+          So whatever acts on the result needs two things to be true, not
+          one: the field carries your authserv-id, and the message went
+          through the milter. The field cannot show the second. A forged{" "}
+          <C>mx.example.com; sworn=pass</C> that arrives during an outage is,
+          byte for byte, what the milter would have written, and a sender
+          loses nothing by putting one on every message in case it lands in
+          one.
+        </p>
+        <ul className={`${PROSE} mt-4 list-disc space-y-2 pl-[1.1rem]`}>
+          <li>
+            <strong>A message can show that it was not handled.</strong> The
+            milter puts one <C>sworn</C> result on every message it handles,
+            IPv4 included, and removes the inbound fields that claim your id.
+            A message with no <C>sworn</C> result under your id, or with more
+            than one, did not go through it. Ignore those results. Exactly
+            one proves nothing either way.
+          </li>
+          <li>
+            <strong>The rest has to come from outside the message.</strong>{" "}
+            Run the milter under a service manager that restarts it, and
+            alert on Postfix failing to reach it; Postfix logs a warning when
+            it cannot reach a milter. Have the consumer treat every{" "}
+            <C>sworn</C> result on mail accepted during that interval as{" "}
+            <C>none</C>.
+          </li>
+          <li>
+            <strong>Mail that never reaches the milter looks the same.</strong>{" "}
+            <C>smtpd_milters</C> covers mail that arrives over SMTP at a
+            service using that setting. A service in <C>master.cf</C> that
+            overrides it, or mail handed to Postfix locally with{" "}
+            <C>sendmail</C>, which goes by <C>non_smtpd_milters</C> instead,
+            is delivered with whatever fields the sender wrote. Nothing
+            failed, so no outage alert fires. The consumer therefore needs
+            evidence, message by message, that the mail came in through a
+            service the milter is on. The message cannot supply it: the
+            milter adds only the result field, which a sender can write too,
+            and it keeps no log of the messages it handled. What can is the
+            route. Check which services override the setting (
+            <C>postconf -P | grep milters</C>), feed the consumer only from
+            services the milter is on, and have it treat a <C>sworn</C>{" "}
+            result on mail from any other route as <C>none</C>.
+          </li>
+          <li>
+            <strong>Keep the consumer on your side of the boundary.</strong>{" "}
+            A filter that takes mail from anywhere other than this Postfix
+            instance sees fields this milter never had the chance to remove.
+            Its trust in your authserv-id should cover only mail that came
+            through here.
+          </li>
+        </ul>
+        <p className={`${PROSE} mt-4`}>
+          Don&rsquo;t close the gap by letting Postfix defer mail when the
+          milter is down. That turns a SwornMail outage into a delivery
+          outage, which is the one thing the protocol rules out.
+        </p>
 
         <h2 className={H2} id="dns">
           DNS
         </h2>
         <p className={PROSE}>
-          The milter uses the host&rsquo;s resolver and makes at most ten
-          lookups per result. Point the host at a validating resolver if you
+          The milter uses the host&rsquo;s resolver and asks it at most ten
+          questions per result: each TXT, PTR or address lookup counts as one.
+          Point the host at a validating resolver if you
           can: an unsigned answer can be spoofed, and DNS is the root of trust
           (see{" "}
           <a href="/verify/#dns" className={LINK}>
             trust in DNS
           </a>
           ). A lookup that times out or fails outright (a SERVFAIL, say), or
-          reaching the limit, gives <C>temperror</C>, never <C>none</C>, so a
+          a walk that would need an eleventh question, gives{" "}
+          <C>temperror</C>, never <C>none</C>: the tenth is still asked, and
+          its answer can still confirm an operator. That way a
           sender&rsquo;s attestation can&rsquo;t be erased by breaking their
           DNS. A record that simply isn&rsquo;t there gives <C>none</C>.
         </p>
+        <div className={NOTE}>
+          <p className={PROSE}>
+            <strong>
+              Ten is a limit on what the milter asks, not on the DNS work
+              behind it.
+            </strong>{" "}
+            The system resolver follows CNAME records itself and doesn&rsquo;t
+            report them, so an alias chain behind one lookup counts as one.
+            The protocol counts alias resolution in the budget of ten and
+            allows at most three CNAME links; the milter enforces neither.
+            The chain length your resolver accepts is the one in force. What
+            the milter does bound is time: <C>--dns-timeout</C> covers all the
+            lookups for one result together, and running out gives{" "}
+            <C>temperror</C>.
+          </p>
+        </div>
 
         <h2 className={H2} id="limits">
           What it doesn&rsquo;t do
