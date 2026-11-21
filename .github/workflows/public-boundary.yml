@@ -16,6 +16,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Called by deploy.yml, so that a publish waits for this check instead of
+  # running beside it.
+  workflow_call:
+    secrets:
+      PRIVATE_IDENTIFIERS:
+        required: false
 
 permissions:
   contents: read

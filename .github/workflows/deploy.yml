@@ -23,6 +23,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The boundary check also runs on its own, but as a separate workflow it
+  # only reports: a merge that failed it was published all the same, while
+  # the check went red next to the deploy. Calling it here puts it in the
+  # path, so `publish` cannot start unless it passed.
+  boundary:
+    uses: ./.github/workflows/public-boundary.yml
+    secrets:
+      PRIVATE_IDENTIFIERS: ${{ secrets.PRIVATE_IDENTIFIERS }}
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -92,7 +101,7 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: build
+    needs: [build, boundary]
     # The credential check lives in the steps below, not here. A job-level
     # `if` can read `vars` but not `secrets`, and both Cloudflare values are
     # secrets so that neither prints in the public run logs. Gating on a
