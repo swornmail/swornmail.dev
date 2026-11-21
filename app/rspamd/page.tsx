@@ -266,6 +266,39 @@ export default function Rspamd() {
           </p>
         </div>
         <p className={PROSE}>
+          So whatever acts on the result needs two things to be true, not
+          one: the field carries your authserv-id, and rspamd scanned the
+          message. The field cannot show the second. A forged{" "}
+          <C>mx.example.com; sworn=pass</C> that arrives during an outage is,
+          byte for byte, what the module would have written.
+        </p>
+        <ul className={`${PROSE} mt-4 list-disc space-y-2 pl-[1.1rem]`}>
+          <li>
+            <strong>Inside rspamd, act on the symbol.</strong>{" "}
+            <C>SWORN_PASS</C> exists only on a message rspamd scanned, and it
+            comes from the module&rsquo;s own lookup of the connecting
+            address, never from a header. A rule or score built on the symbol
+            cannot be fed by a forged field.
+          </li>
+          <li>
+            <strong>Downstream, the header alone is not enough.</strong> A
+            filter that reads the field after delivery cannot tell a forged
+            one from a real one, and a missing field proves nothing: the
+            module adds none for IPv4, local or authenticated senders. Alert
+            on Postfix failing to reach rspamd, and have that filter treat
+            every <C>sworn</C> result on mail accepted during the interval
+            as <C>none</C>.
+          </li>
+          <li>
+            <strong>Or leave no gap.</strong> The gap exists only when Postfix
+            accepts mail it could not hand to rspamd. If your rspamd milter
+            entry defers mail instead, nothing is delivered unscanned and no
+            forged field gets through this way. That is a decision about your
+            spam filter, and it trades delivery during an outage for it;
+            SwornMail does not ask for it.
+          </li>
+        </ul>
+        <p className={PROSE}>
           Don&rsquo;t narrow the deletion with <C>remove_ar_from</C>. It
           recognises a field only by a plain name at its start, so a forged{" "}
           <C>(c) mx.example.com; sworn=pass</C>, or one with the id in quotes,

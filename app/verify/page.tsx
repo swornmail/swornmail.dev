@@ -295,28 +295,53 @@ export default function Verify() {
         </p>
         <ol className={`${PROSE} mt-4 list-decimal space-y-2 pl-[1.1rem]`}>
           <li>
-            Look for a <a href="/records/#reverse" className={LINK}>reverse-tree
-            pointer</a> naming an operator domain. Failing that, take the
-            connecting host&rsquo;s forward-confirmed PTR.
+            <strong>Reverse-tree pointer.</strong> Query for a{" "}
+            <a href="/records/#reverse" className={LINK}>
+              reverse-tree pointer
+            </a>{" "}
+            at no more than two names, in order: the enclosing /64, then the
+            enclosing /48.
+            No other prefix length is queried, and the more specific record
+            wins. The pointer names an operator domain in <C>d=</C>, which
+            still has to pass step 3. A pointer whose domain does not confirm
+            is not an answer: the receiver moves on to the /48 name, and after
+            that to step 2.
           </li>
           <li>
-            Fetch that operator&rsquo;s{" "}
+            <strong>Forward-confirmed PTR.</strong> Otherwise, resolve the PTR
+            of the connecting address and check that the name resolves back to
+            that address. Only one PTR name is considered, and at most three
+            CNAME links are followed. The candidates are the confirmed
+            hostname, then its parents, formed by stripping one leading label
+            at a time. They are tried in order, the first to confirm ends the
+            search, and no more than five are tried. A public suffix, or
+            anything above one, is never queried; a receiver with no public
+            suffix list tries nothing with fewer than three labels.
+          </li>
+          <li>
+            <strong>Confirmation.</strong> A candidate domain is confirmed
+            only if the connecting address falls inside a prefix listed in its{" "}
             <a href="/records/#policy" className={LINK}>
               policy record
             </a>
-            .
-          </li>
-          <li>
-            Confirm the connecting address falls inside one of the prefixes the
-            operator actually attested. This containment check is the whole
-            anti-squatting mechanism — a claim is worth nothing without it.
+            , at <C>_prefixes._sworn.&lt;candidate&gt;</C>. This containment
+            check is the whole anti-squatting mechanism: a pointer or a PTR at
+            a domain that lists no covering prefix confirms nothing.
           </li>
         </ol>
         <p className={`${PROSE} mt-4`}>
-          Discovery runs under a hard budget of 10 DNS queries per connection.
-          Exhausting it yields <C>temperror</C>, never <C>none</C> — an attacker
-          must not be able to convert &ldquo;expensive to answer&rdquo; into
-          &ldquo;not attested&rdquo;.
+          So a PTR of <C>mx1.mailer.example.com</C> gives the candidates{" "}
+          <C>mx1.mailer.example.com</C> and <C>mailer.example.com</C>. Without
+          a public suffix list the walk stops there: <C>example.com</C> has two
+          labels and is never tried.
+        </p>
+        <p className={`${PROSE} mt-4`}>
+          Discovery runs under a hard budget of 10 DNS queries per connection,
+          counting the reverse-tree queries, the candidate queries and CNAME
+          chain resolution together. A receiver that would go over stops and
+          reports <C>temperror</C>, never <C>none</C> — an attacker must not be
+          able to convert &ldquo;expensive to answer&rdquo; into &ldquo;not
+          attested&rdquo;.
         </p>
         <div className={NOTE}>
           <p className={PROSE}>
@@ -346,7 +371,11 @@ export default function Verify() {
             canonical, in-range prefix; an eligible source address; a validity
             window inside the 24-hour cap, allowing at most 300 seconds of
             clock skew; a legal unit; and the connecting address inside the
-            signed prefix.
+            signed prefix. The rejections this stage must make are listed{" "}
+            <a href="#local-checks" className={LINK}>
+              below
+            </a>
+            .
           </li>
           <li>
             <strong>Policy authorisation.</strong> Fetch{" "}
@@ -366,6 +395,75 @@ export default function Verify() {
           No policy record yields <C>none</C>. A malformed policy, an
           unauthorised prefix or a unit mismatch yields <C>permerror</C>.
         </p>
+
+        <h3 className={H3} id="local-checks">
+          What the local checks must reject
+        </h3>
+        <p className={PROSE}>
+          Each of these is a <C>permerror</C>, decided from the token alone, so
+          none of them costs a DNS query.
+        </p>
+        <ul className={`${PROSE} mt-4 list-disc space-y-2 pl-[1.1rem]`}>
+          <li>
+            <strong>Anything but a tagged COSE_Sign1.</strong> The token
+            carries CBOR tag 18. The same structure without the tag is
+            rejected.
+          </li>
+          <li>
+            <strong>Headers outside the protected bucket.</strong>{" "}
+            <C>alg</C> (label 1), the content type (label 3) and <C>kid</C>{" "}
+            (label 4) are read from the protected header and nowhere else. A
+            token with any of the three in the unprotected header is
+            rejected, and so is one with any label in both buckets.
+          </li>
+          <li>
+            <strong>A wrong or missing content type.</strong> It must be the
+            text string <C>application/sworn-token+cbor</C>.
+          </li>
+          <li>
+            <strong>
+              A <C>crit</C> header.
+            </strong>{" "}
+            Label 2 must not be present.
+          </li>
+          <li>
+            <strong>
+              A <C>kid</C> that is not a selector.
+            </strong>{" "}
+            One DNS label: 1 to 63 letters, digits or hyphens, not starting or
+            ending with a hyphen.
+          </li>
+          <li>
+            <strong>A payload key that is not an integer.</strong> Every key
+            in the payload map is a CBOR integer. Unknown integer keys are
+            ignored; a text-string key, or any other type, is rejected.
+          </li>
+          <li>
+            <strong>A duplicate payload key</strong>, or a missing required
+            one. Operator, prefix, <C>iat</C>, <C>exp</C> and role are
+            required; only the unit may be absent, and then it is 64.
+          </li>
+          <li>
+            <strong>A value of the wrong CBOR type.</strong> The operator and
+            the role are text strings, the prefix is a 17-octet byte string,
+            and the unit, <C>iat</C> and <C>exp</C> are unsigned integers. A
+            tag, a null, a simple value or a negative number in one of those
+            places is not converted: the token is malformed.
+          </li>
+          <li>
+            <strong>A unit that breaks the role rule.</strong> The unit is
+            never shorter than the token&rsquo;s prefix and never longer than
+            64. For <C>role=esp-tenant</C> it must equal the prefix length
+            exactly, so a tenant token cannot ask for a unit finer than the
+            prefix it accounts for. The published vectors reject an{" "}
+            <C>esp-tenant</C> token for a /48 with unit 64 as{" "}
+            <C>bad_unit</C>, before any lookup.
+          </li>
+          <li>
+            <strong>A role outside the three defined values</strong>:{" "}
+            <C>mta</C>, <C>esp-tenant</C>, <C>forwarder</C>.
+          </li>
+        </ul>
         <div className={NOTE}>
           <p className={PROSE}>
             <strong>A stolen key alone buys little.</strong> It can sign only
@@ -392,8 +490,21 @@ export default function Verify() {
           both. Any other label is a <C>permerror</C>.
         </p>
         <p className={PROSE}>
-          A token longer than 3072 octets is malformed and is rejected before
-          it is decoded; the longest SWORN line carries at most 3066 octets of token.
+          Three size limits apply, at three layers. The <C>SWORN</C> command
+          line, as sent over SMTP, is at most 4096 octets: a server
+          advertising the keyword must accept that much, and a client must not
+          send more. Its argument is the token in base64url without padding;{" "}
+          <C>=</C> or any character outside that alphabet is refused with{" "}
+          <C>501 5.5.2</C>. The decoded token, the CBOR octets themselves, is
+          limited to 3072 octets by the reference verifiers. They compare the
+          length before any CBOR parsing and report a longer token as
+          malformed. That last limit comes from the implementations and the
+          published vectors; the draft&rsquo;s own text says only that a token
+          should not exceed 512 octets. A 4096-octet line has room for 4088
+          base64url characters, which is 3066 octets of token, so a token that
+          arrives in one <C>SWORN</C> command never reaches it.
+        </p>
+        <p className={PROSE}>
           Verification is strict. A public key or signature <C>R</C> of
           small order is a signature failure: under the identity key, one
           fixed signature verifies for every message, so a domain that

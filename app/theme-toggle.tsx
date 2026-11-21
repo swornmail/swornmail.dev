@@ -15,6 +15,9 @@ export function ThemeToggle() {
   // depends on localStorage and the OS preference, neither of which exists at
   // build time, and rendering a guess would either flash or lie.
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
+  // Set by the first click. Until then the page follows the OS, and the
+  // label has to follow it too.
+  const [overridden, setOverridden] = useState(false);
 
   useEffect(() => {
     const explicit = document.documentElement.dataset.theme;
@@ -22,12 +25,17 @@ export function ThemeToggle() {
       setTheme(explicit);
       return;
     }
-    setTheme(
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light",
-    );
-  }, []);
+    // No override, so the CSS is following prefers-color-scheme and can
+    // switch while the page is open. Reading it once left the label stale
+    // after an OS switch, and the first click then asked for the theme
+    // already showing. The listener is removed as soon as there is an
+    // override, because from then on the OS no longer decides.
+    const system = window.matchMedia("(prefers-color-scheme: dark)");
+    const follow = () => setTheme(system.matches ? "dark" : "light");
+    follow();
+    system.addEventListener("change", follow);
+    return () => system.removeEventListener("change", follow);
+  }, [overridden]);
 
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
@@ -39,6 +47,7 @@ export function ThemeToggle() {
       // page view; it just will not be remembered, which is not worth an error.
     }
     setTheme(next);
+    setOverridden(true);
   }
 
   return (

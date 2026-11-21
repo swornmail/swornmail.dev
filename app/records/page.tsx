@@ -114,6 +114,36 @@ export default function Records() {
         <p className={CAPTION}>
           The selector appears only in the QNAME. There is no <C>s=</C> tag.
         </p>
+        <p className={PROSE}>
+          The reference parsers and the published record vectors hold{" "}
+          <C>pk</C> to more than its encoding. For <C>k=ed25519</C> the value must be all of these, or
+          the record is malformed:
+        </p>
+        <ul className={`${PROSE} mt-4 list-disc space-y-2 pl-[1.1rem]`}>
+          <li>
+            <strong>Canonical base64.</strong> The standard alphabet, with
+            padding, and with the unused bits of the last character set to
+            zero. Each key then has exactly one spelling; a value that differs
+            only in those bits is rejected, not read as the same key.
+          </li>
+          <li>
+            <strong>Exactly 32 octets</strong> once decoded.
+          </li>
+          <li>
+            <strong>An Ed25519 point.</strong> The 32 octets must decode as a
+            point on the curve. Octets that do not are not a key, and the
+            record is malformed instead of being a key that fails every
+            signature.
+          </li>
+        </ul>
+        <p className={`${CAPTION} mt-4`}>
+          A key that does decode but has small order is a different case: the
+          record parses, and{" "}
+          <a href="/verify/#mode2" className={LINK}>
+            every signature under it fails
+          </a>
+          .
+        </p>
 
         <div className={NOTE_FLAG}>
           <p className={PROSE}>
